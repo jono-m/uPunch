@@ -1,0 +1,16 @@
+QTabBar QLabel {
+	min-width: 200px;
+	padding-left: 10px;
+	font-weight: bold;
+}
+CameraViewer{
+	border: 2px solid black;
+}
+PunchTipsSettingsWidget QPushButton {
+	min-width: 40px;
+	max-width: 40px;
+}
+#PunchTipOptions {
+	border: 1px solid black;
+	border-width: 0 0 0 1px;
+}
