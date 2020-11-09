@@ -16,8 +16,15 @@ class AlignmentCamera:
         self.OnCameraChange = Event()
 
         self.UpdateCameraList()
-        # if len(self.cameraList) > 0:
-        #     self.ActivateCamera(self.cameraList[0])
+
+        if len(self.cameraList) > 0:
+            self.ActivateCamera(self.cameraList[0])
+
+    def GetCameraName(self):
+        if self.activeCamera is None:
+            return "No camera selected."
+        else:
+            return self.activeCameraInfo.description()
 
     def MicronsPerPixel(self):
         if self.activeCamera is None:
@@ -56,3 +63,5 @@ class AlignmentCamera:
     def DisconnectCamera(self):
         if self.activeCamera is not None:
             self.activeCamera.release()
+            self.activeCameraInfo = None
+            self.activeCamera = None

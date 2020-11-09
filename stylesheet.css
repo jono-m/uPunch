@@ -6,11 +6,45 @@ QTabBar QLabel {
 CameraViewer{
 	border: 2px solid black;
 }
-PunchTipsSettingsWidget QPushButton {
+PunchTipsSettingsWidget QToolButton {
 	min-width: 40px;
 	max-width: 40px;
 }
 #PunchTipOptions {
 	border: 1px solid black;
 	border-width: 0 0 0 1px;
+}
+StageControllerWidget {
+	background-color: rgb(40, 40, 40);
+	border: 5px inset rgb(100, 100, 100);
+	padding: 20px;
+}
+StageControllerWidget QToolButton {
+	background-color: rgb(60, 60, 60);
+	min-width: 60px;
+	max-width: 60px;
+	min-height: 60px;
+	max-height: 60px;
+	margin: 2px;
+}
+StageControllerWidget QToolButton:hover {
+	background-color: rgb(80, 80, 80);
+}
+StageControllerWidget QToolButton:pressed {
+	background-color: rgb(255, 128, 0IKaleido);
+}
+StageControllerWidget QLabel {
+	font-weight: bold;
+	color: white;
+	qproperty-alignment: AlignCenter;
+}
+StageControllerWidget Spacer {
+	background-color: transparent;
+	min-width: 0px;
+	border: 0px solid black;
+	border-right-width: 1px;
+	margin: 0 20px 0 20px; 
+}
+AxisSettingsBox QLabel[isSectionHeader="true"] {
+	font-weight: bold;
 }

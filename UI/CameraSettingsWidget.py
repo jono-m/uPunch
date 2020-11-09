@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import *
-from UI.CameraViewer import *
+from UI.CameraViewerWidget import *
 from Util import Event
 
 
@@ -24,10 +24,6 @@ class CameraSettingsWidget(QFrame):
         self.cameraWidthField.valueChanged.connect(self.UpdateCameraWidth)
         self.micronsPerPixelLabel = QLabel()
 
-        self.cameraPreview = CameraViewer(alignmentCamera, 30)
-        self.cameraPreviewLabel = QLabel("Camera Preview")
-        self.cameraPreviewLabel.setAlignment(Qt.AlignCenter)
-
         optionsLayout = QVBoxLayout()
         optionsLayout.addWidget(self.cameraListLabel)
         optionsLayout.addWidget(self.cameraList)
@@ -37,6 +33,10 @@ class CameraSettingsWidget(QFrame):
         widthLayout.addWidget(self.cameraWidthField)
         optionsLayout.addLayout(widthLayout)
         optionsLayout.addWidget(self.micronsPerPixelLabel)
+
+        self.cameraPreview = CameraViewerWidget(alignmentCamera, 30)
+        self.cameraPreviewLabel = QLabel()
+        self.cameraPreviewLabel.setAlignment(Qt.AlignCenter)
 
         cameraPreviewLayout = QVBoxLayout()
         cameraPreviewLayout.addWidget(self.cameraPreview, stretch=1)
@@ -52,6 +52,8 @@ class CameraSettingsWidget(QFrame):
     def UpdateFields(self):
         self.micronsPerPixelLabel.setText("(" + str(self.alignmentCamera.MicronsPerPixel()) + " μm/pixel)")
         self.cameraWidthField.setValue(self.alignmentCamera.width)
+        self.cameraPreviewLabel.setText(self.alignmentCamera.GetCameraName() + \
+                                        "\nPreview")
 
     def UpdateCameraWidth(self, value):
         self.alignmentCamera.width = value
