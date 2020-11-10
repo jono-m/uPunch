@@ -31,9 +31,10 @@ class AlignmentCamera:
                 self.ActivateCamera(self.cameraList[data[1]])
 
     def SaveSettings(self):
-        file = open("cameraSettings.pkl", "wb")
-        dill.dump([self.width, self.cameraList.index(self.activeCameraInfo)], file)
-        file.close()
+        if self.activeCamera is not None:
+            file = open("cameraSettings.pkl", "wb")
+            dill.dump([self.width, self.cameraList.index(self.activeCameraInfo)], file)
+            file.close()
 
     def GetCameraName(self):
         if self.activeCamera is None:

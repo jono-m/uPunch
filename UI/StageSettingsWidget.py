@@ -73,7 +73,7 @@ class StageSettingsWidget(QFrame):
         self.deviceList.blockSignals(False)
 
         if sIndex >= 0:
-            self.deviceList.setCurrentIndex(sIndex)
+            self.deviceList.setCurrentRow(sIndex)
         else:
             if self.deviceList.count() > 0:
                 self.deviceList.setCurrentRow(max(0, lastIndex - 1))

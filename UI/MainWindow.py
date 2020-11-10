@@ -1,5 +1,5 @@
 from UI.CameraSettingsWidget import *
-from UI.PunchJobWidget import *
+from UI.PunchJobSetupWidget import *
 from UI.PunchTipsSettingsWidget import *
 from UI.StageSettingsWidget import *
 from StylesheetLoader import *
@@ -24,7 +24,7 @@ class MainApp(QMainWindow):
         self.setCentralWidget(self.tabArea)
         self.tabArea.setTabPosition(QTabWidget.West)
 
-        self.AddTab(PunchJobWidget(), "Punch Job")
+        self.AddTab(PunchJobSetupWidget(), "Punch Job")
         self.AddTab(PunchTipsSettingsWidget(self.punchTips, self.stageSystem), "Punch Tips")
         self.AddTab(CameraSettingsWidget(self.alignmentCamera), "Camera Settings")
         self.AddTab(StageSettingsWidget(self.stageSystem), "Stage Settings")
@@ -37,7 +37,7 @@ class MainApp(QMainWindow):
 
         self.setWindowTitle("μPunch")
 
-        self.tabArea.setCurrentIndex(3)
+        self.tabArea.setCurrentIndex(0)
 
     def AddTab(self, widget, text):
         self.tabArea.addTab(widget, "")
