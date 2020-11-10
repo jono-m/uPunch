@@ -22,7 +22,7 @@ class CameraSettingsWidget(QFrame):
         self.cameraWidthField.setMaximum(1000)
         self.cameraWidthField.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
         self.cameraWidthField.valueChanged.connect(self.UpdateCameraWidth)
-        self.micronsPerPixelLabel = QLabel()
+        self.mmPerPixelLabel = QLabel()
 
         optionsLayout = QVBoxLayout()
         optionsLayout.addWidget(self.cameraListLabel)
@@ -32,7 +32,7 @@ class CameraSettingsWidget(QFrame):
         widthLayout.addWidget(self.cameraWidthLabel)
         widthLayout.addWidget(self.cameraWidthField)
         optionsLayout.addLayout(widthLayout)
-        optionsLayout.addWidget(self.micronsPerPixelLabel)
+        optionsLayout.addWidget(self.mmPerPixelLabel)
 
         self.cameraPreview = CameraViewerWidget(alignmentCamera, 30)
         self.cameraPreviewLabel = QLabel()
@@ -50,7 +50,7 @@ class CameraSettingsWidget(QFrame):
         self.RescanCameras()
 
     def UpdateFields(self):
-        self.micronsPerPixelLabel.setText("(" + str(self.alignmentCamera.MicronsPerPixel()) + " μm/pixel)")
+        self.mmPerPixelLabel.setText("(" + str(self.alignmentCamera.MillimetersPerPixel()) + " mm/pixel)")
         self.cameraWidthField.setValue(self.alignmentCamera.width)
         self.cameraPreviewLabel.setText(self.alignmentCamera.GetCameraName() + \
                                         "\nPreview")

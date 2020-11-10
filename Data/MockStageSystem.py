@@ -12,6 +12,10 @@ class MockAxisSettings(AxisSettings):
 
 class MockStageSystem(StageSystem):
     def __init__(self):
+        self.xSettings = MockAxisSettings(0)
+        self.ySettings = MockAxisSettings(1)
+        self.zSettings = MockAxisSettings(2)
+
         super().__init__()
 
         self._connected = False
@@ -20,26 +24,20 @@ class MockStageSystem(StageSystem):
 
         self._homed = False
 
-        self._portName = "NOT CONNECTED"
-
-        self.xSettings = MockAxisSettings(0)
-        self.ySettings = MockAxisSettings(1)
-        self.zSettings = MockAxisSettings(2)
-
     def Connect(self, portName: str):
         self._connected = True
         self._homed = False
-        self._portName = portName
+        self.portName = portName
 
-    def GetDeviceName(self) -> str:
-        return self._portName
+    def GetAxisName(self, axis: AxisSettings) -> str:
+        return "Mock Axis"
 
     def IsConnected(self) -> bool:
         return self._connected
 
     def Disconnect(self):
         self._connected = False
-        self._portName = "NOT CONNECTED"
+        self.portName = "NOT CONNECTED"
 
     def HomeAll(self):
         self.xSettings.position = 0

@@ -11,19 +11,19 @@ class StageControllerWidget(QFrame):
         self.stageSystem = stageSystem
 
         self.upSlow = PanArrow(False, False, False)
-        self.upSlow.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, True, 1))
+        self.upSlow.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, True, -1))
         self.upSlow.released.connect(lambda: self.stageSystem.StopPan())
 
         self.upFast = PanArrow(True, False, False)
-        self.upFast.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, False, 1))
+        self.upFast.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, False, -1))
         self.upFast.released.connect(lambda: self.stageSystem.StopPan())
 
         self.downSlow = PanArrow(False, True, False)
-        self.downSlow.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, True, -1))
+        self.downSlow.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, True, 1))
         self.downSlow.released.connect(lambda: self.stageSystem.StopPan())
 
         self.downFast = PanArrow(True, True, False)
-        self.downFast.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, False, -1))
+        self.downFast.pressed.connect(lambda: self.stageSystem.PanAxis(self.stageSystem.ySettings, False, 1))
         self.downFast.released.connect(lambda: self.stageSystem.StopPan())
 
         self.rightSlow = PanArrow(False, True, True)

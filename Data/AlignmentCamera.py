@@ -4,6 +4,8 @@ from PySide2.QtGui import *
 import typing
 from PySide2.QtMultimedia import *
 from Util import Event
+import os
+import dill
 
 
 class AlignmentCamera:
@@ -17,8 +19,21 @@ class AlignmentCamera:
 
         self.UpdateCameraList()
 
-        if len(self.cameraList) > 0:
-            self.ActivateCamera(self.cameraList[0])
+        self.LoadSettings()
+
+    def LoadSettings(self):
+        if os.path.exists("cameraSettings.pkl"):
+            file = open("cameraSettings.pkl", "rb")
+            data = dill.load(file)
+            file.close()
+            self.width = data[0]
+            if 0 <= data[1] < len(self.cameraList):
+                self.ActivateCamera(self.cameraList[data[1]])
+
+    def SaveSettings(self):
+        file = open("cameraSettings.pkl", "wb")
+        dill.dump([self.width, self.cameraList.index(self.activeCameraInfo)], file)
+        file.close()
 
     def GetCameraName(self):
         if self.activeCamera is None:
@@ -26,10 +41,10 @@ class AlignmentCamera:
         else:
             return self.activeCameraInfo.description()
 
-    def MicronsPerPixel(self):
+    def MillimetersPerPixel(self):
         if self.activeCamera is None:
             return 0
-        return self.width / self.GetResolution().width() * 1000
+        return self.width / self.GetResolution().width()
 
     def ActivateCamera(self, camera: QCameraInfo):
         self.DisconnectCamera()

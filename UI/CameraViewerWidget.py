@@ -3,7 +3,7 @@ from Data.AlignmentCamera import *
 
 
 class CameraViewerWidget(QLabel):
-    def __init__(self, camera: AlignmentCamera, fps: float, showCrosshairs=False):
+    def __init__(self, camera: AlignmentCamera, fps: float, showCrosshairs=True):
         super().__init__()
 
         self.camera = camera
@@ -37,8 +37,8 @@ class CameraViewerWidget(QLabel):
 
     def mousePressEvent(self, ev:QMouseEvent):
         if self.showCrosshairs:
-            clickPoint = ev.localPos() - QPointF(self.rect().width(), self.rect().height())
-            scaled = clickPoint * self.camera.MicronsPerPixel() / 1000
+            clickPoint = ev.localPos() - QPointF(self.rect().width(), self.rect().height())/2
+            scaled = clickPoint * self.camera.MillimetersPerPixel()
             self.OnClicked.Invoke(scaled)
 
     def paintEvent(self, arg__1: QPaintEvent):

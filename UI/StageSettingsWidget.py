@@ -14,6 +14,7 @@ class StageSettingsWidget(QFrame):
 
         self.deviceLabel = QLabel("Available COM Ports")
         self.deviceList = QListWidget()
+        self.deviceList.currentRowChanged.connect(self.HandleSelection)
 
         self.xAxis = AxisSettingsBox(self.stageSystem.xSettings, "X-axis", self.stageSystem)
         self.yAxis = AxisSettingsBox(self.stageSystem.ySettings, "Y-axis", self.stageSystem)
@@ -23,6 +24,18 @@ class StageSettingsWidget(QFrame):
         self.zAxis.OnSettingsChanged.Register(self.stageSystem.FlushSettings)
 
         settingsLayout = QHBoxLayout()
+
+        deviceLayout = QVBoxLayout()
+        deviceLayout.addWidget(QLabel("Detected devices:"))
+        deviceLayout.addWidget(self.deviceList)
+        self.rescanButton = QPushButton("Rescan")
+        self.rescanButton.clicked.connect(self.Rescan)
+        self.homeButton = QPushButton("Re-Home")
+        self.homeButton.clicked.connect(self.stageSystem.HomeAll)
+        deviceLayout.addWidget(self.rescanButton)
+        deviceLayout.addWidget(self.homeButton)
+
+        settingsLayout.addLayout(deviceLayout)
         settingsLayout.addWidget(self.xAxis)
         settingsLayout.addWidget(self.yAxis)
         settingsLayout.addWidget(self.zAxis)
@@ -32,10 +45,47 @@ class StageSettingsWidget(QFrame):
         layout.addWidget(self.stageViewer)
         self.setLayout(layout)
 
+        self.devices = None
+
+        self.Rescan()
+
+    def HandleSelection(self, index):
+        self.stageSystem.Connect(self.devices[index][0])
+
+        self.xAxis.UpdateFields()
+        self.yAxis.UpdateFields()
+        self.zAxis.UpdateFields()
+
+    def Rescan(self):
+        self.devices = self.stageSystem.GetDeviceList()
+        self.deviceList.blockSignals(True)
+
+        lastIndex = self.deviceList.currentRow()
+
+        self.deviceList.clear()
+
+        sIndex = -1
+        for (port, description) in self.devices:
+            self.deviceList.addItem(description + " (" + port + ")")
+            if port == self.stageSystem.portName:
+                sIndex = self.deviceList.count() - 1
+
+        self.deviceList.blockSignals(False)
+
+        if sIndex >= 0:
+            self.deviceList.setCurrentIndex(sIndex)
+        else:
+            if self.deviceList.count() > 0:
+                self.deviceList.setCurrentRow(max(0, lastIndex - 1))
+            else:
+                self.stageSystem.Disconnect()
+
 
 class AxisSettingsBox(QFrame):
     def __init__(self, axis: AxisSettings, title: str, stageSystem: StageSystem):
         super().__init__()
+
+        self.title = title
 
         self.stageSystem = stageSystem
 
@@ -43,7 +93,7 @@ class AxisSettingsBox(QFrame):
 
         self.OnSettingsChanged = Event()
 
-        self.titleLabel = QLabel(title)
+        self.titleLabel = QLabel()
         self.titleLabel.setProperty('isSectionHeader', True)
 
         self.slowPanLabel = QLabel("Slow Pan (mm/sec): ")
@@ -125,6 +175,8 @@ class AxisSettingsBox(QFrame):
         for x in self.children():
             x.blockSignals(True)
 
+        self.titleLabel.setText(self.title + "\n(" + self.stageSystem.GetAxisName(self.axis) + ")")
+
         self.slowPanField.setValue(self.axis.panSlowSpeed)
         self.fastPanField.setValue(self.axis.panFastSpeed)
         self.indexField.setValue(self.axis.deviceIndex)
@@ -145,3 +197,4 @@ class AxisSettingsBox(QFrame):
         self.axis.maxSpeed = self.maxSpeedField.value()
         self.axis.flipOrientation = self.flipField.isChecked()
         self.OnSettingsChanged.Invoke(self.axis)
+        self.UpdateFields()

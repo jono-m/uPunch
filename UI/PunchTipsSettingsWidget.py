@@ -114,6 +114,8 @@ class PunchTipsSettingsWidget(QFrame):
         self.listWidget.UpdateList()
 
     def UpdateFields(self):
+        self.listWidget.UpdateList()
+
         if self.listWidget.selectedTip is None:
             self.nameField.setText("")
             self.nameField.setEnabled(False)

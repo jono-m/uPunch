@@ -1,4 +1,6 @@
 import typing
+import dill
+import os
 
 
 class PunchTip:
@@ -11,3 +13,16 @@ class PunchTip:
 class PunchTips:
     def __init__(self):
         self.tips: typing.List[PunchTip] = []
+
+        self.LoadSettings()
+
+    def LoadSettings(self):
+        if os.path.exists("tipSettings.pkl"):
+            file = open("tipSettings.pkl", "rb")
+            self.tips = dill.load(file)
+            file.close()
+
+    def SaveSettings(self):
+        file = open("tipSettings.pkl", "wb")
+        dill.dump(self.tips, file)
+        file.close()

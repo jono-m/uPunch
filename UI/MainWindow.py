@@ -19,9 +19,6 @@ class MainApp(QMainWindow):
         self.alignmentCamera = AlignmentCamera()
         self.calibrationSettings = CalibrationSettings()
         self.punchTips = PunchTips()
-        self.punchTips.tips.append(PunchTip("3mm tip", 42, 3))
-        self.punchTips.tips.append(PunchTip("1.5mm tip", 40, 1.5))
-        self.punchTips.tips.append(PunchTip("0.75mm tip", 40, .75))
 
         self.tabArea = QTabWidget()
         self.setCentralWidget(self.tabArea)
@@ -48,4 +45,8 @@ class MainApp(QMainWindow):
                                            QLabel(text, self.tabArea.tabBar()))
 
     def closeEvent(self, event: QCloseEvent):
+        self.stageSystem.SaveSettings()
+        self.alignmentCamera.SaveSettings()
+        self.punchTips.SaveSettings()
+        self.calibrationSettings.SaveSettings()
         self.alignmentCamera.DisconnectCamera()
