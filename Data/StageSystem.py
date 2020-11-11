@@ -4,7 +4,6 @@ from zaber_motion.ascii.device import Axis
 from zaber_motion import Units
 import typing
 from Util import *
-from Data.Data3D import *
 from PySide2.QtWidgets import *
 import serial.tools.list_ports
 import dill

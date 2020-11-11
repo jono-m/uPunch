@@ -8,6 +8,7 @@ from PySide2.QtGui import *
 from UI.CalibrationWidget import *
 from Data.StageSystem import *
 from Data.MockStageSystem import *
+from Data.Design import *
 from Data.AlignmentCamera import *
 
 

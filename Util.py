@@ -12,6 +12,13 @@ class CleanSpinBox(QDoubleSpinBox):
         return repr(val)
 
 
+def ScaleRectCenter(r: QRectF, scaleFactor):
+    newR = QRectF()
+    newR.setSize(r.size() * scaleFactor)
+    newR.moveCenter(r.center())
+    return newR
+
+
 class Event:
     class Listener:
         def __init__(self, discardOnSave, func: typing.Callable):
