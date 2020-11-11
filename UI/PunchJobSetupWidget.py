@@ -35,6 +35,7 @@ class PunchJobSetupWidget(QFrame):
 
     def BrowseForDXF(self):
         dialog = BrowseForDXFDialog(self)
+        self.fileField.setText("")
         if dialog.exec_():
             filename = dialog.selectedFiles()
 
@@ -42,6 +43,8 @@ class PunchJobSetupWidget(QFrame):
                 self.design.LoadFromDXFFile(filename[0])
                 self.layerList.Repopulate()
                 self.cadViewer.RefreshDesign()
+
+                self.fileField.setText(filename[0])
 
 
 class LayerList(QFrame):
@@ -52,12 +55,17 @@ class LayerList(QFrame):
 
         self.OnChanged = Event()
 
+        mainLayout = QVBoxLayout()
+        mainLayout.setAlignment(Qt.AlignTop)
+        mainLayout.addWidget(QLabel("Active Layers:"))
+
         self.layerLayout = QGridLayout()
-        self.setLayout(self.layerLayout)
+        self.layerLayout.setAlignment(Qt.AlignTop)
+        mainLayout.addLayout(self.layerLayout)
+        self.setLayout(mainLayout)
 
     def Repopulate(self):
-        for c in self.layerLayout.children():
-            c.deleteLater()
+        clearLayout(self.layerLayout)
 
         i = 0
         for layer in self.design.layers:
@@ -72,6 +80,17 @@ class LayerList(QFrame):
         self.design.layers[layer] = bool(state)
         self.Repopulate()
         self.OnChanged.Invoke()
+
+
+def clearLayout(layout):
+    if layout is not None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+            else:
+                clearLayout(item.layout())
 
 
 class BrowseForDXFDialog(QFileDialog):
