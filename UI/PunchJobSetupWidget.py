@@ -15,8 +15,22 @@ class PunchJobSetupWidget(QFrame):
         self.browseButton.clicked.connect(self.BrowseForDXF)
 
         self.cadViewer = CADViewer(self.design)
+        self.cadViewer.OnCircleClicked.Register(self.HandleCircleClick)
+        self.cadViewer.CanHoverFunc = self.CanHoverCircle
         self.layerList = LayerList(self.design)
         self.layerList.OnChanged.Register(self.cadViewer.RefreshDesign)
+
+        self.aLabel = QLabel("Calibration Point A: ")
+        self.aCoordinates = QLabel("")
+        self.aButton = QPushButton("Select")
+        self.aButton.clicked.connect(self.DoSelectA)
+
+        self.bLabel = QLabel("Calibration Point B: ")
+        self.bCoordinates = QLabel("")
+        self.bButton = QPushButton("Select")
+        self.bButton.clicked.connect(self.DoSelectB)
+        self.alignmentButton = QPushButton("Start Alignment >>")
+        self.alignmentButton.clicked.connect(self.OpenAlignmentWindow)
 
         layout = QVBoxLayout()
         fileLayout = QHBoxLayout()
@@ -24,18 +38,115 @@ class PunchJobSetupWidget(QFrame):
         fileLayout.addWidget(self.fileField)
         fileLayout.addWidget(self.browseButton)
 
+        aLayout = QVBoxLayout()
+        aLayout.addWidget(self.aLabel)
+        aLayout.addWidget(self.aCoordinates)
+        aLayout.addWidget(self.aButton)
+        bLayout = QVBoxLayout()
+        bLayout.addWidget(self.bLabel)
+        bLayout.addWidget(self.bCoordinates)
+        bLayout.addWidget(self.bButton)
+        ABLayout = QVBoxLayout()
+        ABLayout.setAlignment(Qt.AlignTop)
+        ABLayout.addLayout(aLayout)
+        ABLayout.addLayout(bLayout)
+
+        sideLayout = QVBoxLayout()
+        sideLayout.setAlignment(Qt.AlignTop)
+        sideLayout.addWidget(self.layerList, stretch=1)
+        sideLayout.addLayout(ABLayout, stretch=0)
+
         cadLayout = QHBoxLayout()
         cadLayout.addWidget(self.cadViewer)
-        cadLayout.addWidget(self.layerList)
+        cadLayout.addLayout(sideLayout)
 
         layout.addLayout(fileLayout)
         layout.addLayout(cadLayout)
+        layout.addWidget(self.alignmentButton, alignment=Qt.AlignRight)
+
+        self.isSettingA = False
+        self.isSettingB = False
 
         self.setLayout(layout)
 
+        self.UpdateView()
+
+    def DoSelectA(self):
+        self.isSettingA = not self.isSettingA
+        self.UpdateView()
+
+    def DoSelectB(self):
+        self.isSettingB = not self.isSettingB
+        self.UpdateView()
+
+    def HandleCircleClick(self, c: Circle):
+        if self.isSettingA:
+            self.design.circleA = c
+            if self.design.circleB == c:
+                self.design.circleB = None
+        elif self.isSettingB:
+            self.design.circleB = c
+            if self.design.circleA == c:
+                self.design.circleA = None
+        else:
+            c.specificallyIgnored = not c.specificallyIgnored
+            if c.specificallyIgnored:
+                if self.design.circleA == c:
+                    self.design.circleA = None
+                if self.design.circleB == c:
+                    self.design.circleB = None
+
+        self.isSettingA = False
+        self.isSettingB = False
+
+        self.UpdateView()
+
+    def OpenAlignmentWindow(self):
+        pass
+
+    def UpdateAB(self):
+        if self.design.circleA is not None:
+            self.aCoordinates.setText(
+                "X: " + str(round(self.design.circleA.center.x(), 2)) +
+                "\nY: " + str(round(self.design.circleA.center.y(), 2)))
+        else:
+            self.aCoordinates.setText("<b>NONE SELECTED</b>")
+        if self.design.circleB is not None:
+            self.bCoordinates.setText(
+                "X: " + str(round(self.design.circleB.center.x(), 2)) +
+                "\nY: " + str(round(self.design.circleB.center.y(), 2)))
+        else:
+            self.bCoordinates.setText("<b>NONE SELECTED</b>")
+
+        self.alignmentButton.setEnabled(self.design.circleA is not None and self.design.circleB is not None)
+
+        if self.isSettingA:
+            self.aButton.setText("Cancel")
+            self.bButton.setEnabled(False)
+        else:
+            self.aButton.setText("Select")
+            self.bButton.setEnabled(True)
+
+        if self.isSettingB:
+            self.bButton.setText("Cancel")
+            self.aButton.setEnabled(False)
+        else:
+            self.bButton.setText("Select")
+            self.aButton.setEnabled(True)
+
+        if self.isSettingA or self.isSettingB:
+            self.cadViewer.SetInfoText("Choose a circle to use for alignment.")
+        else:
+            self.cadViewer.SetInfoText(None)
+
+    def CanHoverCircle(self, c: Circle):
+        if self.isSettingA or self.isSettingB:
+            return not c.specificallyIgnored
+        else:
+            return True
+
     def BrowseForDXF(self):
         dialog = BrowseForDXFDialog(self)
-        self.fileField.setText("")
         if dialog.exec_():
             filename = dialog.selectedFiles()
 
@@ -48,11 +159,14 @@ class PunchJobSetupWidget(QFrame):
                     msg.setInformativeText(ret)
                     msg.setWindowTitle("DXF Load Error")
                     msg.exec_()
-                else:
-                    self.fileField.setText(filename[0])
 
+        self.UpdateView()
+
+    def UpdateView(self):
+        self.fileField.setText(self.design.filename)
         self.layerList.Repopulate()
         self.cadViewer.RefreshDesign()
+        self.UpdateAB()
 
 
 class LayerList(QFrame):
@@ -65,7 +179,7 @@ class LayerList(QFrame):
 
         mainLayout = QVBoxLayout()
         mainLayout.setAlignment(Qt.AlignTop)
-        mainLayout.addWidget(QLabel("Active Layers:"))
+        mainLayout.addWidget(QLabel("<b>Active Layers:</b>"))
 
         self.layerLayout = QGridLayout()
         self.layerLayout.setAlignment(Qt.AlignTop)
@@ -76,16 +190,16 @@ class LayerList(QFrame):
         clearLayout(self.layerLayout)
 
         i = 0
-        for layer in self.design.layers:
+        for layer in self.design.GetLayers():
             self.layerLayout.addWidget(QLabel(layer), i, 0)
             toggle = QCheckBox()
-            toggle.setChecked(self.design.layers[layer])
+            toggle.setChecked(self.design.GetLayers()[layer])
             toggle.stateChanged.connect(lambda state, l=layer: self.UpdateState(state, l))
             self.layerLayout.addWidget(toggle, i, 1)
             i += 1
 
     def UpdateState(self, state, layer):
-        self.design.layers[layer] = bool(state)
+        self.design.SetLayerEnabled(layer, bool(state))
         self.Repopulate()
         self.OnChanged.Invoke()
 

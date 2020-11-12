@@ -11,12 +11,12 @@ class MockAxisSettings(AxisSettings):
 
 
 class MockStageSystem(StageSystem):
-    def __init__(self):
+    def __init__(self, hostWidget: QWidget):
         self.xSettings = MockAxisSettings(0)
         self.ySettings = MockAxisSettings(1)
         self.zSettings = MockAxisSettings(2)
 
-        super().__init__()
+        super().__init__(hostWidget)
 
         self._connected = False
 

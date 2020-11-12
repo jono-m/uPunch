@@ -38,32 +38,50 @@ class Circle:
 class Design:
     def __init__(self):
         self._circles: typing.List[Circle] = []
-        self.layers: typing.Dict[str, bool] = {}
+        self._layers: typing.Dict[str, bool] = {}
 
         self.rect = QRectF()
 
-        self._circleA: typing.Optional[Circle] = None
-        self._circleB: typing.Optional[Circle] = None
+        self.circleA: typing.Optional[Circle] = None
+        self.circleB: typing.Optional[Circle] = None
 
         self._scale = 0
         self._rotation = 0
         self._offset = QPointF()
         self._flipY = False
 
+        self.filename = ""
+
+        self.LoadFromDXFFile("500kCartridge.dxf")
+
+    def GetLayers(self):
+        return self._layers.copy()
+
+    def SetLayerEnabled(self, layerName: str, enabled: bool):
+        self._layers[layerName] = enabled
+
+        if not enabled:
+            if self.circleA is not None and self.circleA.layer == layerName:
+                self.circleA = None
+            if self.circleB is not None and self.circleB.layer == layerName:
+                self.circleB = None
+
     def LoadFromDXFFile(self, filename) -> typing.Optional[str]:
+        self.filename = filename
+
         modelSpace = ezdxf.readfile(filename).modelspace()
 
         self._circles = self.ExtractCircles(modelSpace)
 
-        self.layers = {}
+        self._layers = {}
         self.rect = None
         for circle in self._circles:
             if self.rect is None:
                 self.rect = circle.GetRect()
             else:
                 self.rect = self.rect.united(circle.GetRect())
-            if circle.layer not in self.layers:
-                self.layers[circle.layer] = True
+            if circle.layer not in self._layers:
+                self._layers[circle.layer] = True
 
         return None
 
@@ -88,7 +106,7 @@ class Design:
         return circles
 
     def GetLocalCircles(self):
-        return [c for c in self._circles if self.layers[c.layer]]
+        return [c for c in self._circles if self._layers[c.layer]]
 
     def GetTransformedCircles(self):
         return [circle.GetTransformed(self._scale, self._rotation, self._offset, self._flipY) for circle in
