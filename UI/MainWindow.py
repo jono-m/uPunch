@@ -16,7 +16,7 @@ class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.stageSystem = MockStageSystem()
+        self.stageSystem = StageSystem(self)
         self.alignmentCamera = AlignmentCamera()
         self.calibrationSettings = CalibrationSettings()
         self.punchTips = PunchTips()

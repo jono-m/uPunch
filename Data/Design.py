@@ -42,12 +42,15 @@ class Design:
 
         self.rect = QRectF()
 
+        self._circleA: typing.Optional[Circle] = None
+        self._circleB: typing.Optional[Circle] = None
+
         self._scale = 0
         self._rotation = 0
         self._offset = QPointF()
         self._flipY = False
 
-    def LoadFromDXFFile(self, filename) -> 'Design':
+    def LoadFromDXFFile(self, filename) -> typing.Optional[str]:
         modelSpace = ezdxf.readfile(filename).modelspace()
 
         self._circles = self.ExtractCircles(modelSpace)
@@ -62,10 +65,12 @@ class Design:
             if circle.layer not in self.layers:
                 self.layers[circle.layer] = True
 
+        return None
+
     def ExtractCircles(self, space: ezdxf.layouts.BaseLayout) -> typing.List[Circle]:
         circleResults = space.query('CIRCLE')
-        circles = [Circle(QPointF(entity.dxf.center.x, entity.dxf.center.y)/1000,
-                          entity.dxf.radius/1000,
+        circles = [Circle(QPointF(entity.dxf.center.x, entity.dxf.center.y) / 1000,
+                          entity.dxf.radius / 1000,
                           entity.dxf.layer,
                           False)
                    for entity in circleResults]
@@ -77,7 +82,7 @@ class Design:
             for spaceCircle in spaceCircles:
                 transformed = spaceCircle.GetTransformed(insertResult.dxf.xscale, insertResult.dxf.rotation,
                                                          QPointF(insertResult.dxf.insert.x,
-                                                                 insertResult.dxf.insert.y)/1000)
+                                                                 insertResult.dxf.insert.y) / 1000)
                 transformed.layer = insertResult.dxf.layer
                 circles.append(transformed)
         return circles

@@ -57,7 +57,6 @@ class StageZViewerWidget(QGraphicsView):
         if self.isEnabled():
             axisPos = self.stageSystem.zSettings.ClampAxis(
                 self.StageToAxis(self.mapToScene(event.localPos().toPoint()).y()))
-            print(axisPos)
             self.OnClicked.Invoke(axisPos)
             self.setCursor(Qt.ArrowCursor)
         super().mousePressEvent(event)

@@ -40,11 +40,19 @@ class PunchJobSetupWidget(QFrame):
             filename = dialog.selectedFiles()
 
             if filename is not None:
-                self.design.LoadFromDXFFile(filename[0])
-                self.layerList.Repopulate()
-                self.cadViewer.RefreshDesign()
+                ret = self.design.LoadFromDXFFile(filename[0])
+                if ret is not None:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText("DXF Load Error")
+                    msg.setInformativeText(ret)
+                    msg.setWindowTitle("DXF Load Error")
+                    msg.exec_()
+                else:
+                    self.fileField.setText(filename[0])
 
-                self.fileField.setText(filename[0])
+        self.layerList.Repopulate()
+        self.cadViewer.RefreshDesign()
 
 
 class LayerList(QFrame):

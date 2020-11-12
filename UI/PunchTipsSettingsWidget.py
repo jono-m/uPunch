@@ -14,8 +14,6 @@ class PunchTipsSettingsWidget(QFrame):
 
         self.stageSystem = stageSystem
 
-        self.selectedTip: typing.Optional[PunchTip] = None
-
         self.listWidget = PunchTipsListWidget(punchTips)
         self.listWidget.OnPunchSelected.Register(self.UpdateFields)
         self.listLabel = QLabel("Available punch tips:")
@@ -44,6 +42,9 @@ class PunchTipsSettingsWidget(QFrame):
 
         self.saveButton = QPushButton("Save")
         self.saveButton.clicked.connect(self.SaveOptions)
+
+        self.testPunchButton = QPushButton("Test Punch")
+        self.testPunchButton.clicked.connect(lambda: self.stageSystem.DoPunch(self.listWidget.selectedTip.punchDepth))
 
         buttonsLayout = QVBoxLayout()
         buttonsLayout.addWidget(self.addButton)
@@ -78,6 +79,7 @@ class PunchTipsSettingsWidget(QFrame):
         optionsLayout.addLayout(diameterLayout)
         optionsLayout.addLayout(depthLayout)
         optionsLayout.addWidget(self.saveButton)
+        optionsLayout.addWidget(self.testPunchButton)
         optionsLayout.setAlignment(Qt.AlignTop)
         optionsWidget.setLayout(optionsLayout)
 
@@ -101,6 +103,7 @@ class PunchTipsSettingsWidget(QFrame):
 
     def OptionsChanged(self):
         self.saveButton.setEnabled(True)
+        self.testPunchButton.setEnabled(False)
 
     def RemoveCurrentTip(self):
         if self.listWidget.selectedTip is not None:
@@ -136,4 +139,5 @@ class PunchTipsSettingsWidget(QFrame):
             self.removeButton.setEnabled(True)
 
         self.saveButton.setEnabled(False)
+        self.testPunchButton.setEnabled(True)
         self.saveButton.clearFocus()

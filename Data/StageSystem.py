@@ -33,7 +33,11 @@ class AxisSettings:
 
 
 class StageSystem:
-    def __init__(self):
+    STATE_IDLE = 0
+    STATE_PUNCH_LOWER = 1
+    STATE_PUNCH_RAISE = 2
+
+    def __init__(self, widgetHost: QWidget):
         self._axisList: typing.List[Axis] = []
         self._activeConnection: typing.Optional[Connection] = None
         self.portName = ""
@@ -43,11 +47,43 @@ class StageSystem:
         self.ySettings = AxisSettings(1)
         self.zSettings = AxisSettings(2)
 
+        self.OnPunchBegin = Event()
+        self.OnPunchFinish = Event()
+
+        self.widgetHost = widgetHost
+
         self.LoadSettings()
 
         self._isStationary = True
 
         self._lastPosition = None
+
+        self.state = StageSystem.STATE_IDLE
+
+        self.punchTimer = QTimer(widgetHost)
+        self.punchTimer.timeout.connect(self.PunchTick)
+
+    def DoPunch(self, depth):
+        print(depth)
+        if self.state != StageSystem.STATE_IDLE:
+            return
+        self.OnPunchBegin.Invoke()
+        self.state = StageSystem.STATE_PUNCH_LOWER
+        self.SetPosition(z=depth)
+        self.punchTimer.start()
+
+    def RaisePunch(self):
+        self.state = StageSystem.STATE_PUNCH_RAISE
+        self.SetPosition(z=self.zSettings.minimum)
+
+    def PunchTick(self):
+        if not self.IsMoving():
+            if self.state == StageSystem.STATE_PUNCH_RAISE:
+                self.state = StageSystem.STATE_IDLE
+                self.punchTimer.stop()
+                self.OnPunchFinish.Invoke()
+            elif self.state == StageSystem.STATE_PUNCH_LOWER:
+                self.RaisePunch()
 
     def LoadSettings(self):
         if os.path.exists("stageSettings.pkl"):
@@ -67,10 +103,20 @@ class StageSystem:
 
     def Connect(self, portName: str):
         self.Disconnect()
-        self.portName = portName
+
+        if portName not in [p[0] for p in self.GetDeviceList()]:
+            self.portName = ""
+            return
+        else:
+            self.portName = portName
+
         self._activeConnection = Connection.open_serial_port(self.portName)
         self._activeConnection.disconnected.subscribe(lambda alert: self.OnDisconnect.Invoke())
         self._axisList = [device.get_axis(1) for device in self._activeConnection.detect_devices()]
+
+        devices = self._activeConnection.detect_devices()
+        for d in devices:
+            d.all_axes.unpark()
 
         self.FlushSettings(self.xSettings)
         self.FlushSettings(self.ySettings)
@@ -86,6 +132,10 @@ class StageSystem:
 
     def Disconnect(self):
         if self.IsConnected():
+            devices = self._activeConnection.detect_devices()
+            for d in devices:
+                d.all_axes.park()
+
             self.portName = ""
             self._activeConnection.close()
 
@@ -129,7 +179,15 @@ class StageSystem:
         if not self.IsConnected():
             return 0, 0, 0
         if self._isStationary and self._lastPosition is not None:
-            return self._lastPosition
+            if axis is None:
+                return self._lastPosition
+            else:
+                if axis == self.xSettings:
+                    return self._lastPosition[0]
+                if axis == self.ySettings:
+                    return self._lastPosition[1]
+                if axis == self.zSettings:
+                    return self._lastPosition[2]
         if axis is None:
             x = self._axisList[self.xSettings.deviceIndex].get_position(Units.LENGTH_MILLIMETRES)
             y = self._axisList[self.ySettings.deviceIndex].get_position(Units.LENGTH_MILLIMETRES)
@@ -147,10 +205,10 @@ class StageSystem:
             x = self.xSettings.ClampAxis(x)
             self._axisList[self.xSettings.deviceIndex].move_absolute(x, Units.LENGTH_MILLIMETRES, False)
         if y is not None:
-            y = self.xSettings.ClampAxis(y)
+            y = self.ySettings.ClampAxis(y)
             self._axisList[self.ySettings.deviceIndex].move_absolute(y, Units.LENGTH_MILLIMETRES, False)
         if z is not None:
-            z = self.xSettings.ClampAxis(z)
+            z = self.zSettings.ClampAxis(z)
             self._axisList[self.zSettings.deviceIndex].move_absolute(z, Units.LENGTH_MILLIMETRES, False)
 
         self._isStationary = False

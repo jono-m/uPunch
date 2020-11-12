@@ -54,10 +54,10 @@ class CalibrationWidget(QFrame):
         for x in self.children():
             x.blockSignals(True)
 
-        self.xField.setMinimum(self.stageSystem.xSettings.minimum)
-        self.xField.setMaximum(self.stageSystem.xSettings.maximum)
-        self.yField.setMinimum(self.stageSystem.ySettings.minimum)
-        self.yField.setMaximum(self.stageSystem.ySettings.maximum)
+        self.xField.setMinimum(-self.stageSystem.xSettings.absMaximum)
+        self.xField.setMaximum(self.stageSystem.xSettings.absMaximum)
+        self.yField.setMinimum(-self.stageSystem.ySettings.absMaximum)
+        self.yField.setMaximum(self.stageSystem.ySettings.absMaximum)
         self.xField.setValue(self.calibrationSettings.punchOffset.x())
         self.yField.setValue(self.calibrationSettings.punchOffset.y())
 
@@ -115,7 +115,6 @@ class RecalibrateDialog(QDialog):
     def SetMarkPoint(self):
         p = self.stageSystem.GetPosition()
         self.markPoint = QPointF(p[0], p[1])
-        print(self.calibrationSettings.punchOffset)
         shifted = self.markPoint + self.calibrationSettings.punchOffset
         self.stageSystem.SetPosition(x=shifted.x(), y=shifted.y())
 
@@ -156,11 +155,6 @@ class PunchTipSelection(QFrame):
 
 
 class PunchSpotMaker(QFrame):
-    STATE_PREP = -1
-    STATE_IDLE = 0
-    STATE_PUNCH = 1
-    STATE_RAISE = 2
-
     def __init__(self, stageSystem: StageSystem):
         super().__init__()
 
@@ -186,42 +180,23 @@ class PunchSpotMaker(QFrame):
         bLayout.addWidget(self.punchButton)
         layout.addLayout(bLayout)
 
+        self.stageSystem.OnPunchFinish.Register(self.PunchFinished)
+
         self.setLayout(layout)
 
         self.activeTip: typing.Optional[PunchTip] = None
 
-        self.RaisePunch()
-        self.state = PunchSpotMaker.STATE_PREP
-
-        timer = QTimer(self)
-        timer.timeout.connect(self.Tick)
-        timer.start()
-
     def DoPunch(self):
-        self.state = PunchSpotMaker.STATE_PUNCH
         self.backButton.setEnabled(False)
         self.punchButton.setEnabled(False)
         self.punchButton.setText("Marking spot...")
-        self.stageSystem.SetPosition(z=self.activeTip.punchDepth)
+        self.stageSystem.DoPunch(self.activeTip.punchDepth)
 
-    def RaisePunch(self):
-        self.state = PunchSpotMaker.STATE_RAISE
-        self.punchButton.setEnabled(False)
-        self.punchButton.setText("Raising...")
-        self.stageSystem.SetPosition(z=self.stageSystem.zSettings.minimum)
-
-    def Tick(self):
-        if not self.stageSystem.IsMoving():
-            if self.state == PunchSpotMaker.STATE_PREP or self.state == PunchSpotMaker.STATE_RAISE:
-                self.punchButton.setEnabled(True)
-                self.backButton.setEnabled(True)
-                self.punchButton.setText("Punch")
-                if self.state == PunchSpotMaker.STATE_RAISE:
-                    self.OnPunchFinished.Invoke()
-                self.state = PunchSpotMaker.STATE_IDLE
-            elif self.state == PunchSpotMaker.STATE_PUNCH:
-                self.RaisePunch()
-
+    def PunchFinished(self):
+        self.backButton.setEnabled(True)
+        self.punchButton.setEnabled(True)
+        self.punchButton.setText("Punch")
+        self.OnPunchFinished.Invoke()
 
 class CameraCalibrationWidget(QFrame):
     def __init__(self, alignmentCamera: AlignmentCamera, stageSystem: StageSystem):
