@@ -1,6 +1,4 @@
 from PySide2.QtWidgets import *
-from Data.AlignmentCamera import *
-from Data.StageSystem import *
 from UI.CameraViewerWidget import *
 from Data.CalibrationSettings import *
 from UI.PunchTipsListWidget import *
@@ -68,7 +66,8 @@ class CalibrationWidget(QFrame):
         self.calibrationSettings.punchOffset = QPointF(self.xField.value(), self.yField.value())
 
     def BeginRecalibrate(self):
-        dialog = RecalibrateDialog(self, self.punchTips, self.calibrationSettings, self.alignmentCamera, self.stageSystem)
+        dialog = RecalibrateDialog(self, self.punchTips, self.calibrationSettings, self.alignmentCamera,
+                                   self.stageSystem)
         dialog.finished.connect(self.UpdateFields)
         dialog.exec_()
 
@@ -139,6 +138,8 @@ class PunchTipSelection(QFrame):
         self.cancelButton.clicked.connect(self.OnCancel.Invoke)
         self.nextButton = QPushButton("Next")
         self.nextButton.clicked.connect(lambda: self.OnTipSelected.Invoke(self.punchTipsList.selectedTip))
+        self.nextButton.setProperty("NextButton", True)
+        self.nextButton.setFocus()
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Attach and select a punch tip for calibration:"))
@@ -169,6 +170,8 @@ class PunchSpotMaker(QFrame):
         self.backButton.clicked.connect(self.OnBack.Invoke)
         self.punchButton = QPushButton("Punch")
         self.punchButton.clicked.connect(self.DoPunch)
+        self.punchButton.setProperty("NextButton", True)
+        self.punchButton.setFocus()
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel(
@@ -198,6 +201,7 @@ class PunchSpotMaker(QFrame):
         self.punchButton.setText("Punch")
         self.OnPunchFinished.Invoke()
 
+
 class CameraCalibrationWidget(QFrame):
     def __init__(self, alignmentCamera: AlignmentCamera, stageSystem: StageSystem):
         super().__init__()
@@ -209,12 +213,14 @@ class CameraCalibrationWidget(QFrame):
 
         self.viewer = StageViewerWidget(stageSystem, False)
         self.cameraPreview = CameraViewerWidget(self.alignmentCamera, 30, True)
-        self.cameraPreview.OnClicked.Register(self.CameraAdjust)
+        self.cameraPreview.OnClicked.Register(self.stageSystem.MoveXY)
 
         self.backButton = QPushButton("Back")
         self.backButton.clicked.connect(self.OnBack.Invoke)
         self.finishButton = QPushButton("Finish")
         self.finishButton.clicked.connect(self.OnFinished.Invoke)
+        self.finishButton.setProperty("NextButton", True)
+        self.finishButton.setFocus()
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel(
@@ -232,9 +238,3 @@ class CameraCalibrationWidget(QFrame):
         layout.addLayout(bLayout)
 
         self.setLayout(layout)
-
-    def CameraAdjust(self, offset: QPointF):
-        currentPosition = self.stageSystem.GetPosition()
-        xy = QPointF(currentPosition[0], currentPosition[1])
-        final = xy+offset
-        self.stageSystem.SetPosition(x=final.x(), y=final.y())

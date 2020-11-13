@@ -35,9 +35,9 @@ class CameraViewerWidget(QLabel):
 
         self.update()
 
-    def mousePressEvent(self, ev:QMouseEvent):
+    def mousePressEvent(self, ev: QMouseEvent):
         if self.showCrosshairs:
-            clickPoint = ev.localPos() - QPointF(self.rect().width(), self.rect().height())/2
+            clickPoint = ev.localPos() - QPointF(self.rect().width(), self.rect().height()) / 2
             scaled = clickPoint * self.camera.MillimetersPerPixel()
             self.OnClicked.Invoke(scaled)
 
@@ -70,7 +70,6 @@ class CameraViewerWidget(QLabel):
                                  QPointF(self.rect().right(), self.mouseIndicatorPosition.y()))
                 painter.drawLine(QPointF(self.mouseIndicatorPosition.x(), self.rect().top()),
                                  QPointF(self.mouseIndicatorPosition.x(), self.rect().bottom()))
-
 
     def CaptureImage(self):
         if not self.isVisible():

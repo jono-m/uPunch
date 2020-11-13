@@ -4,7 +4,7 @@ from Data.Design import *
 from Util import *
 
 
-class CADViewer(QGraphicsView):
+class CADEditor(QGraphicsView):
     def __init__(self, design: Design):
         super().__init__()
 
@@ -37,6 +37,8 @@ class CADViewer(QGraphicsView):
 
         self.aLabel = self.scene().addSimpleText("A")
         self.bLabel = self.scene().addSimpleText("B")
+
+        self.hideIgnored = False
 
         self._hoverCircle: typing.Optional[Circle] = None
 
@@ -92,6 +94,9 @@ class CADViewer(QGraphicsView):
         self._circles.clear()
 
         for c in self.design.GetLocalCircles():
+            if self.hideIgnored:
+                if c.specificallyIgnored:
+                    continue
             r = c.GetRect()
             r.moveCenter(QPointF(r.center().x(), -r.center().y()))
             self._circles[c] = self.scene().addEllipse(r)

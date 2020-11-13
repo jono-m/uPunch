@@ -45,6 +45,9 @@ StageControllerWidget Spacer {
 	border-right-width: 1px;
 	margin: 0 20px 0 20px; 
 }
-AxisSettingsBox QLabel[isSectionHeader="true"] {
+LayerList {
+	border: 1px solid black;
+}
+QPushButton[NextButton="true"] {
 	font-weight: bold;
 }

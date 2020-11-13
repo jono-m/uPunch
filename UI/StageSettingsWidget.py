@@ -175,7 +175,7 @@ class AxisSettingsBox(QFrame):
         for x in self.children():
             x.blockSignals(True)
 
-        self.titleLabel.setText(self.title + "\n(" + self.stageSystem.GetAxisName(self.axis) + ")")
+        self.titleLabel.setText("<b>" + self.title + "\n(" + self.stageSystem.GetAxisName(self.axis) + ")</b>")
 
         self.slowPanField.setValue(self.axis.panSlowSpeed)
         self.fastPanField.setValue(self.axis.panFastSpeed)

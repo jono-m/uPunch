@@ -1,10 +1,17 @@
 from PySide2.QtWidgets import *
-from UI.CADViewer import *
+from UI.CADEditor import *
+from UI.PunchJobDialog import *
 
 
 class PunchJobSetupWidget(QFrame):
-    def __init__(self):
+    def __init__(self, punchTips: PunchTips, calibrationSettings: CalibrationSettings, alignmentCamera: AlignmentCamera,
+                 stageSystem: StageSystem):
         super().__init__()
+
+        self.punchTips = punchTips
+        self.calibrationSettings = calibrationSettings
+        self.alignmentCamera = alignmentCamera
+        self.stageSystem = stageSystem
 
         self.design = Design()
 
@@ -14,11 +21,13 @@ class PunchJobSetupWidget(QFrame):
         self.browseButton = QPushButton("Browse...")
         self.browseButton.clicked.connect(self.BrowseForDXF)
 
-        self.cadViewer = CADViewer(self.design)
+        self.cadViewer = CADEditor(self.design)
         self.cadViewer.OnCircleClicked.Register(self.HandleCircleClick)
         self.cadViewer.CanHoverFunc = self.CanHoverCircle
         self.layerList = LayerList(self.design)
-        self.layerList.OnChanged.Register(self.cadViewer.RefreshDesign)
+        self.layerList.OnChanged.Register(self.UpdateView)
+
+        self.circleCount = QLabel("")
 
         self.aLabel = QLabel("Calibration Point A: ")
         self.aCoordinates = QLabel("")
@@ -29,7 +38,8 @@ class PunchJobSetupWidget(QFrame):
         self.bCoordinates = QLabel("")
         self.bButton = QPushButton("Select")
         self.bButton.clicked.connect(self.DoSelectB)
-        self.alignmentButton = QPushButton("Start Alignment >>")
+        self.alignmentButton = QPushButton("Start Alignment")
+        self.alignmentButton.setProperty("NextButton", True)
         self.alignmentButton.clicked.connect(self.OpenAlignmentWindow)
 
         layout = QVBoxLayout()
@@ -55,6 +65,8 @@ class PunchJobSetupWidget(QFrame):
         sideLayout.setAlignment(Qt.AlignTop)
         sideLayout.addWidget(self.layerList, stretch=1)
         sideLayout.addLayout(ABLayout, stretch=0)
+        sideLayout.addWidget(self.circleCount)
+        sideLayout.addWidget(self.alignmentButton)
 
         cadLayout = QHBoxLayout()
         cadLayout.addWidget(self.cadViewer)
@@ -62,7 +74,6 @@ class PunchJobSetupWidget(QFrame):
 
         layout.addLayout(fileLayout)
         layout.addLayout(cadLayout)
-        layout.addWidget(self.alignmentButton, alignment=Qt.AlignRight)
 
         self.isSettingA = False
         self.isSettingB = False
@@ -102,7 +113,9 @@ class PunchJobSetupWidget(QFrame):
         self.UpdateView()
 
     def OpenAlignmentWindow(self):
-        pass
+        dialog = PunchJobDialog(self, self.design, self.punchTips, self.calibrationSettings, self.alignmentCamera,
+                                self.stageSystem)
+        dialog.exec_()
 
     def UpdateAB(self):
         if self.design.circleA is not None:
@@ -167,6 +180,8 @@ class PunchJobSetupWidget(QFrame):
         self.layerList.Repopulate()
         self.cadViewer.RefreshDesign()
         self.UpdateAB()
+        self.circleCount.setText("<b>" + str(
+            len([c for c in self.design.GetLocalCircles() if not c.specificallyIgnored])) + "</b> punch spots.")
 
 
 class LayerList(QFrame):

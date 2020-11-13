@@ -197,6 +197,12 @@ class StageSystem:
         else:
             return self._axisList[axis.deviceIndex].get_position(Units.LENGTH_MILLIMETRES)
 
+    def MoveXY(self, offset: QPointF):
+        currentPosition = self.GetPosition()
+        xy = QPointF(currentPosition[0], currentPosition[1])
+        final = xy + offset
+        self.SetPosition(x=final.x(), y=final.y())
+
     def SetPosition(self, x=None, y=None, z=None):
         if self.IsMoving():
             return

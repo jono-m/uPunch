@@ -25,7 +25,9 @@ class MainApp(QMainWindow):
         self.setCentralWidget(self.tabArea)
         self.tabArea.setTabPosition(QTabWidget.West)
 
-        self.AddTab(PunchJobSetupWidget(), "Punch Job")
+        self.AddTab(
+            PunchJobSetupWidget(self.punchTips, self.calibrationSettings, self.alignmentCamera, self.stageSystem),
+            "Punch Job")
         self.AddTab(PunchTipsSettingsWidget(self.punchTips, self.stageSystem), "Punch Tips")
         self.AddTab(CameraSettingsWidget(self.alignmentCamera), "Camera Settings")
         self.AddTab(StageSettingsWidget(self.stageSystem), "Stage Settings")

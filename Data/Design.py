@@ -13,25 +13,21 @@ class Circle:
         self.layer = layer
         self.specificallyIgnored = specificallyIgnored
 
+    def Copy(self):
+        return Circle(self.center, self.radius, self.layer, self.specificallyIgnored)
+
     def GetRect(self):
         r = QRectF()
         r.setSize(QSizeF(self.radius * 2, self.radius * 2))
         r.moveCenter(self.center)
         return r
 
-    def GetTransformed(self, scale=1, rotation=0, offset=QPointF(), flipY=False):
-        newCircle = Circle(self.center, self.radius, self.layer, self.specificallyIgnored)
-        if flipY:
-            newCircle.center.setY(-newCircle.center.y())
-        c = math.cos(rotation)
-        s = math.sin(rotation)
+    def GetTransformed(self, scale=1, rotation=0, offset=QPointF()):
+        newCircle = self.Copy()
+
         newCircle.radius = newCircle.radius * scale
         newCircle.center = newCircle.center * scale
-        x0 = newCircle.center.x()
-        y0 = newCircle.center.y()
-        x1 = x0 * c - y0 * s
-        y1 = x0 * s + y0 * c
-        newCircle.center = QPointF(x1, y1) + offset
+        newCircle.center = rotate(newCircle.center, rotation) + offset
         return newCircle
 
 
@@ -45,14 +41,13 @@ class Design:
         self.circleA: typing.Optional[Circle] = None
         self.circleB: typing.Optional[Circle] = None
 
-        self._scale = 0
-        self._rotation = 0
-        self._offset = QPointF()
-        self._flipY = False
+        self.globalA = QPointF()
+        self.globalB = QPointF()
+        self.flipY = False
 
         self.filename = ""
 
-        self.LoadFromDXFFile("500kCartridge.dxf")
+        self.LoadFromDXFFile("test.dxf")
 
     def GetLayers(self):
         return self._layers.copy()
@@ -72,6 +67,10 @@ class Design:
         modelSpace = ezdxf.readfile(filename).modelspace()
 
         self._circles = self.ExtractCircles(modelSpace)
+
+        if len(self._circles) >= 2:
+            self.circleA = self._circles[0]
+            self.circleB = self._circles[1]
 
         self._layers = {}
         self.rect = None
@@ -99,8 +98,8 @@ class Design:
             spaceCircles = self.ExtractCircles(space)
             for spaceCircle in spaceCircles:
                 transformed = spaceCircle.GetTransformed(insertResult.dxf.xscale, insertResult.dxf.rotation,
-                                                         QPointF(insertResult.dxf.insert.x,
-                                                                 insertResult.dxf.insert.y) / 1000)
+                                                         QPointF(insertResult.dxf.insert.x / 1000,
+                                                                 insertResult.dxf.insert.y / 1000))
                 transformed.layer = insertResult.dxf.layer
                 circles.append(transformed)
         return circles
@@ -108,6 +107,50 @@ class Design:
     def GetLocalCircles(self):
         return [c for c in self._circles if self._layers[c.layer]]
 
-    def GetTransformedCircles(self):
-        return [circle.GetTransformed(self._scale, self._rotation, self._offset, self._flipY) for circle in
-                self._circles]
+    def GetAlignedCircles(self):
+        localCircles = [c.Copy() for c in self.GetLocalCircles()]
+        localA = self.circleA.center
+        localB = self.circleB.center
+        if self.flipY:
+            for c in localCircles:
+                c.center = QPointF(c.center.x(), -c.center.y())
+            localA = QPointF(localA.x(), -localA.y())
+            localB = QPointF(localB.x(), -localB.y())
+
+        localDist = distance(localA, localB)
+        globalDist = distance(self.globalA, self.globalB)
+        if localDist == 0:
+            s = 0
+        else:
+            s = globalDist / localDist
+
+        theta = signedAngle(localB-localA, self.globalB - self.globalA)
+        globalCircles = []
+        for c in localCircles:
+            transformedCircle = c.Copy()
+            transformedCircle.center = transformedCircle.center - localA  # Relative to A
+            transformedCircle.center = transformedCircle.center * s  # scaled
+            transformedCircle.center = rotate(transformedCircle.center, theta)  # rotated
+            transformedCircle.center = transformedCircle.center + self.globalA  # Relative to global A
+            globalCircles.append(transformedCircle)
+
+        return globalCircles
+
+
+def rotate(a: QPointF, theta):
+    x = math.cos(theta) * a.x() - math.sin(theta) * a.y()
+    y = math.sin(theta) * a.x() + math.cos(theta) * a.y()
+    return QPointF(x, y)
+
+
+def signedAngle(a: QPointF, b: QPointF):
+    if a == QPointF() or b == QPointF():
+        return 0
+    dot = a.x() * b.x() + a.y() * b.y()  # dot product
+    det = a.x() * b.y() - a.y() * b.x()  # determinant
+    angle = math.atan2(det, dot)  # atan2(y, x) or atan2(sin, cos)
+    return angle
+
+
+def distance(a: QPointF, b: QPointF):
+    return math.sqrt((a.x() - b.x()) ** 2 + (a.y() - b.y()) ** 2)
