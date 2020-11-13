@@ -114,15 +114,12 @@ class RecalibrateDialog(QDialog):
     def SetMarkPoint(self):
         p = self.stageSystem.GetPosition()
         self.markPoint = QPointF(p[0], p[1])
-        shifted = self.markPoint + self.calibrationSettings.punchOffset
-        self.stageSystem.SetPosition(x=shifted.x(), y=shifted.y())
-
         self.stackedLayout.setCurrentWidget(self.cameraCalibrationWidget)
 
     def SetCalibration(self):
         p = self.stageSystem.GetPosition()
         shifted = QPointF(p[0], p[1])
-        self.calibrationSettings.punchOffset = shifted - self.markPoint
+        self.calibrationSettings.punchOffset = self.markPoint - shifted
 
         self.accept()
 

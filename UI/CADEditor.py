@@ -93,15 +93,20 @@ class CADEditor(QGraphicsView):
 
         self._circles.clear()
 
+        bRect = None
         for c in self.design.GetLocalCircles():
             if self.hideIgnored:
                 if c.specificallyIgnored:
                     continue
             r = c.GetRect()
             r.moveCenter(QPointF(r.center().x(), -r.center().y()))
+            if bRect is None:
+                bRect = r
+            else:
+                bRect = bRect.united(r)
             self._circles[c] = self.scene().addEllipse(r)
 
-        self.setSceneRect(self.design.rect)
+        self.setSceneRect(bRect)
         self.HandleResize()
         self.Recolor()
 

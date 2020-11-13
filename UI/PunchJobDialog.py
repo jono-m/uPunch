@@ -21,12 +21,28 @@ class PunchJobDialog(QDialog):
         self.setWindowTitle("Punch Job: " + self.design.filename)
 
         self.alignmentWidget = AlignmentWidget(self)
+        self.alignmentWidget.OnCancel.Register(lambda: self.reject())
+        self.alignmentWidget.OnStartJob.Register(self.StartJob)
+
+        self.jobFollowWidget = JobFollowWidget(self)
+        self.jobFollowWidget.OnCancel.Register(lambda: self.reject())
+        self.jobFollowWidget.OnFinish.Register(lambda: self.accept())
 
         self.stackedLayout = QStackedLayout()
         self.stackedLayout.addWidget(self.alignmentWidget)
+        self.stackedLayout.addWidget(self.jobFollowWidget)
         self.setLayout(self.stackedLayout)
 
+        QApplication.processEvents()
+        self.move(0, 0)
         self.setModal(True)
+
+    def StartJob(self):
+        self.stackedLayout.setCurrentWidget(self.jobFollowWidget)
+        self.jobFollowWidget.StartJob()
+
+    def GetPunch(self):
+        return self.alignmentWidget.punchSelection.selectedTip
 
 
 class AlignmentWidget(QFrame):
@@ -75,9 +91,12 @@ class AlignmentWidget(QFrame):
         buttonsLayout.addWidget(self.bPreview)
         buttonsLayout.addWidget(self.bMarkButton)
         buttonsLayout.addWidget(self.flipCheck)
+        buttonsLayout.addWidget(self.cancelButton)
+        buttonsLayout.addWidget(self.nextButton)
         markLayout = QHBoxLayout()
         markLayout.addWidget(self.cameraViewer)
         markLayout.addLayout(buttonsLayout)
+        markLayout.addWidget(self.punchSelection)
         layout = QVBoxLayout()
         layout.addWidget(self.stageViewer)
         layout.addLayout(markLayout)
@@ -89,10 +108,10 @@ class AlignmentWidget(QFrame):
         pos = self.pjd.stageSystem.GetPosition()
         pos = QPointF(pos[0], pos[1])
         if a:
-            self.aPreview.setPixmap(image)
+            self.aPreview.setPixmap(image.scaled(256, 256, Qt.KeepAspectRatio))
             self.aSpot = pos
         else:
-            self.bPreview.setPixmap(image)
+            self.bPreview.setPixmap(image.scaled(256, 256, Qt.KeepAspectRatio))
             self.bSpot = pos
 
         self.pjd.design.globalA = self.aSpot
@@ -104,3 +123,71 @@ class AlignmentWidget(QFrame):
         self.pjd.design.flipY = bool(checked)
 
         self.designItem.CacheCircles()
+
+
+class JobFollowWidget(QFrame):
+    def __init__(self, pjd: PunchJobDialog):
+        super().__init__()
+
+        self.pjd = pjd
+
+        self.stageViewer = StageViewerWidget(self.pjd.stageSystem, False)
+
+        self.OnFinish = Event()
+        self.OnCancel = Event()
+
+        self.designItem = CADGraphicsItem(self.pjd.design)
+        self.stageViewer.xyViewer.scene().addItem(self.designItem)
+
+        self.stageViewer.setEnabled(False)
+
+        self.pjd.stageSystem.OnPunchFinish.Register(self.PunchFinished)
+        self.pjd.stageSystem.OnPanFinish.Register(self.PanFinished)
+
+        self.isInJob = False
+
+        self.currentCircleNumber = -1
+
+        self.circlesToPunch: typing.List[Circle] = []
+
+        self.cancelButton = QPushButton("Cancel")
+        self.cancelButton.clicked.connect(self.CancelJob)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.stageViewer)
+        buttons = QHBoxLayout()
+        buttons.addWidget(self.cancelButton)
+        layout.addLayout(buttons)
+
+        self.setLayout(layout)
+
+    def StartJob(self):
+        self.circlesToPunch = self.pjd.design.GetAlignedCircles()
+        for c in self.circlesToPunch:
+            c.center = c.center + self.pjd.calibrationSettings.punchOffset
+        self.isInJob = True
+        self.currentCircleNumber = -1
+        self.PunchFinished()
+
+    def CancelJob(self):
+        self.isInJob = False
+        self.OnCancel.Invoke()
+
+    def PunchFinished(self):
+        if not self.isInJob:
+            return
+
+        self.currentCircleNumber += 1
+
+        if self.currentCircleNumber >= len(self.circlesToPunch):
+            self.isInJob = False
+            self.OnFinish.Invoke()
+            return
+
+        pos = self.circlesToPunch[self.currentCircleNumber].center
+        self.pjd.stageSystem.SetPosition(x=pos.x(), y=pos.y())
+
+    def PanFinished(self):
+        if not self.isInJob:
+            return
+        self.pjd.stageSystem.DoPunch(self.pjd.GetPunch().punchDepth)

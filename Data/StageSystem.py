@@ -36,6 +36,7 @@ class StageSystem:
     STATE_IDLE = 0
     STATE_PUNCH_LOWER = 1
     STATE_PUNCH_RAISE = 2
+    STATE_PAN = 3
 
     def __init__(self, widgetHost: QWidget):
         self._axisList: typing.List[Axis] = []
@@ -49,6 +50,7 @@ class StageSystem:
 
         self.OnPunchBegin = Event()
         self.OnPunchFinish = Event()
+        self.OnPanFinish = Event()
 
         self.widgetHost = widgetHost
 
@@ -62,6 +64,7 @@ class StageSystem:
 
         self.punchTimer = QTimer(widgetHost)
         self.punchTimer.timeout.connect(self.PunchTick)
+        self.punchTimer.start()
 
     def DoPunch(self, depth):
         print(depth)
@@ -70,7 +73,6 @@ class StageSystem:
         self.OnPunchBegin.Invoke()
         self.state = StageSystem.STATE_PUNCH_LOWER
         self.SetPosition(z=depth)
-        self.punchTimer.start()
 
     def RaisePunch(self):
         self.state = StageSystem.STATE_PUNCH_RAISE
@@ -80,10 +82,12 @@ class StageSystem:
         if not self.IsMoving():
             if self.state == StageSystem.STATE_PUNCH_RAISE:
                 self.state = StageSystem.STATE_IDLE
-                self.punchTimer.stop()
                 self.OnPunchFinish.Invoke()
             elif self.state == StageSystem.STATE_PUNCH_LOWER:
                 self.RaisePunch()
+            elif self.state == StageSystem.STATE_PAN:
+                self.state = StageSystem.STATE_IDLE
+                self.OnPanFinish.Invoke()
 
     def LoadSettings(self):
         if os.path.exists("stageSettings.pkl"):
@@ -93,8 +97,6 @@ class StageSystem:
              self.zSettings,
              self.portName] = dill.load(file)
             file.close()
-            if self.portName != "":
-                self.Connect(self.portName)
 
     def SaveSettings(self):
         file = open("stageSettings.pkl", "wb")
@@ -112,7 +114,12 @@ class StageSystem:
 
         self._activeConnection = Connection.open_serial_port(self.portName)
         self._activeConnection.disconnected.subscribe(lambda alert: self.OnDisconnect.Invoke())
-        self._axisList = [device.get_axis(1) for device in self._activeConnection.detect_devices()]
+        try:
+            self._axisList = [device.get_axis(1) for device in self._activeConnection.detect_devices()]
+        except:
+            self._activeConnection = None
+            self.portName = ""
+            return
 
         devices = self._activeConnection.detect_devices()
         for d in devices:
@@ -210,9 +217,11 @@ class StageSystem:
         if x is not None:
             x = self.xSettings.ClampAxis(x)
             self._axisList[self.xSettings.deviceIndex].move_absolute(x, Units.LENGTH_MILLIMETRES, False)
+            self.state = StageSystem.STATE_PAN
         if y is not None:
             y = self.ySettings.ClampAxis(y)
             self._axisList[self.ySettings.deviceIndex].move_absolute(y, Units.LENGTH_MILLIMETRES, False)
+            self.state = StageSystem.STATE_PAN
         if z is not None:
             z = self.zSettings.ClampAxis(z)
             self._axisList[self.zSettings.deviceIndex].move_absolute(z, Units.LENGTH_MILLIMETRES, False)
