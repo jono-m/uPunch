@@ -38,6 +38,8 @@ class CADEditor(QGraphicsView):
         self.aLabel = self.scene().addSimpleText("A")
         self.bLabel = self.scene().addSimpleText("B")
 
+        self.setMinimumSize(300, 300)
+
         self.hideIgnored = False
 
         self._hoverCircle: typing.Optional[Circle] = None
@@ -63,6 +65,8 @@ class CADEditor(QGraphicsView):
                 yStart = yStart + self.gridSpacing.height()
 
     def mouseMoveEvent(self, event: QMouseEvent):
+        if not self.isEnabled():
+            return
         itemsUnderMouse = self.scene().items(self.mapToScene(event.localPos().toPoint()))
         smallestCircle = None
         for itemUnderMouse in itemsUnderMouse:
@@ -82,6 +86,8 @@ class CADEditor(QGraphicsView):
         self.Recolor()
 
     def mousePressEvent(self, event):
+        if not self.isEnabled():
+            return
         if self._hoverCircle is not None:
             self.OnCircleClicked.Invoke(self._hoverCircle)
 
@@ -94,6 +100,9 @@ class CADEditor(QGraphicsView):
         self._circles.clear()
 
         bRect = None
+
+        self.legendWidget.setVisible(not self.hideIgnored)
+
         for c in self.design.GetLocalCircles():
             if self.hideIgnored:
                 if c.specificallyIgnored:

@@ -5,6 +5,7 @@ from UI.PunchTipsListWidget import *
 from UI.StageViewerWidget import *
 from UI.CADGraphicsItem import *
 from Data.Design import *
+from UI.CADEditor import *
 
 
 class PunchJobDialog(QDialog):
@@ -51,7 +52,7 @@ class AlignmentWidget(QFrame):
 
         self.pjd = pjd
 
-        self.stageViewer = StageViewerWidget(self.pjd.stageSystem, False)
+        self.stageViewer = StageViewerWidget(self.pjd.stageSystem, False, False)
 
         self.cameraViewer = CameraViewerWidget(self.pjd.alignmentCamera, 30, True)
         self.cameraViewer.OnClicked.Register(self.pjd.stageSystem.MoveXY)
@@ -64,10 +65,12 @@ class AlignmentWidget(QFrame):
         self.flipCheck = QCheckBox("Flip Design")
         self.flipCheck.setChecked(self.pjd.design.flipY)
 
-        self.flipCheck.toggled.connect(self.Flip)
+        self.designWidget = CADEditor(self.pjd.design)
+        self.designWidget.hideIgnored = True
+        self.designWidget.setEnabled(False)
+        self.designWidget.RefreshDesign()
 
-        self.aPreview = QLabel()
-        self.bPreview = QLabel()
+        self.flipCheck.toggled.connect(self.Flip)
 
         self.aSpot = QPointF()
         self.bSpot = QPointF()
@@ -85,33 +88,31 @@ class AlignmentWidget(QFrame):
         self.designItem = CADGraphicsItem(self.pjd.design)
         self.stageViewer.xyViewer.scene().addItem(self.designItem)
 
-        buttonsLayout = QVBoxLayout()
-        buttonsLayout.addWidget(self.aPreview)
-        buttonsLayout.addWidget(self.aMarkButton)
-        buttonsLayout.addWidget(self.bPreview)
-        buttonsLayout.addWidget(self.bMarkButton)
+        alignLayout = QGridLayout()
+        alignLayout.addWidget(self.cameraViewer, 0, 0, 1, 2)
+        alignLayout.addWidget(self.aMarkButton, 1, 0)
+        alignLayout.addWidget(self.bMarkButton, 1, 1)
+
+        buttonsLayout = QHBoxLayout()
         buttonsLayout.addWidget(self.flipCheck)
         buttonsLayout.addWidget(self.cancelButton)
         buttonsLayout.addWidget(self.nextButton)
-        markLayout = QHBoxLayout()
-        markLayout.addWidget(self.cameraViewer)
-        markLayout.addLayout(buttonsLayout)
-        markLayout.addWidget(self.punchSelection)
-        layout = QVBoxLayout()
-        layout.addWidget(self.stageViewer)
-        layout.addLayout(markLayout)
+
+        layout = QGridLayout()
+        layout.addWidget(self.designWidget, 0, 0)
+        layout.addWidget(self.stageViewer, 0, 1)
+        layout.addLayout(buttonsLayout, 1, 0)
+        layout.addLayout(alignLayout, 1, 0)
+        layout.addWidget(self.punchSelection, 1, 1)
 
         self.setLayout(layout)
 
     def MarkSpot(self, a: bool):
-        image = self.cameraViewer.pixmap()
         pos = self.pjd.stageSystem.GetPosition()
         pos = QPointF(pos[0], pos[1])
         if a:
-            self.aPreview.setPixmap(image.scaled(256, 256, Qt.KeepAspectRatio))
             self.aSpot = pos
         else:
-            self.bPreview.setPixmap(image.scaled(256, 256, Qt.KeepAspectRatio))
             self.bSpot = pos
 
         self.pjd.design.globalA = self.aSpot

@@ -17,6 +17,9 @@ class StageXYViewerWidget(QGraphicsView):
 
         self.setBackgroundBrush(QBrush(QColor(100, 100, 100)))
 
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.setScene(QGraphicsScene())
 
         self.stageRect = StageRectGraphicsItem()
