@@ -39,7 +39,7 @@ class CameraViewerWidget(QLabel):
         if self.showCrosshairs:
             clickPoint = ev.localPos() - QPointF(self.rect().width(), self.rect().height()) / 2
             scaled = clickPoint * self.camera.MillimetersPerPixel()
-            self.OnClicked.Invoke(scaled)
+            self.OnClicked.Invoke(QPointF(scaled.x(), scaled.y()))
 
     def paintEvent(self, arg__1: QPaintEvent):
         if not self.isVisible():

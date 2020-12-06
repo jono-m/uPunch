@@ -66,7 +66,13 @@ class Design:
 
         modelSpace = ezdxf.readfile(filename).modelspace()
 
-        self._circles = self.ExtractCircles(modelSpace)
+        circles = self.ExtractCircles(modelSpace)
+        points = []
+        self._circles = []
+        for c in circles:
+            if c.center not in points:
+                self._circles.append(c)
+                points.append(c.center)
 
         if len(self._circles) >= 2:
             self.circleA = self._circles[0]
@@ -134,7 +140,7 @@ class Design:
             transformedCircle.center = transformedCircle.center + self.globalA  # Relative to global A
             globalCircles.append(transformedCircle)
 
-        return globalCircles
+        return [c for c in globalCircles if not c.specificallyIgnored]
 
 
 def rotate(a: QPointF, theta):

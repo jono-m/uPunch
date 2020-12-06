@@ -88,7 +88,7 @@ class RecalibrateDialog(QDialog):
         self.setLayout(self.stackedLayout)
 
         self.ptsWidget = PunchTipSelection(punchTips)
-        self.ptsWidget.OnCancel.Register(self.reject)
+        self.ptsWidget.OnCancel.Register(lambda: self.reject())
         self.ptsWidget.OnTipSelected.Register(self.SetPunchTipSelection)
 
         self.punchSpotWidget = PunchSpotMaker(self.stageSystem)

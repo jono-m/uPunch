@@ -51,3 +51,7 @@ LayerList {
 QPushButton[NextButton="true"] {
 	font-weight: bold;
 }
+
+AlignmentWidget CameraViewerWidget {
+	max-width: 0px;
+}

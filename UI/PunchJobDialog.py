@@ -101,9 +101,9 @@ class AlignmentWidget(QFrame):
         layout = QGridLayout()
         layout.addWidget(self.designWidget, 0, 0)
         layout.addWidget(self.stageViewer, 0, 1)
-        layout.addLayout(buttonsLayout, 1, 0)
         layout.addLayout(alignLayout, 1, 0)
-        layout.addWidget(self.punchSelection, 1, 1)
+        layout.addWidget(self.punchSelection, 1, 1, 2, 1)
+        layout.addLayout(buttonsLayout, 2, 0)
 
         self.setLayout(layout)
 

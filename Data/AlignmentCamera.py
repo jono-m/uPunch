@@ -67,7 +67,8 @@ class AlignmentCamera:
         if status:
             height, width, channel = frame.shape
             bytesPerLine = 3 * width
-            return QImage(frame.data, width, height, bytesPerLine, QImage.Format_RGB888).rgbSwapped()
+            return QImage(frame.data, width, height, bytesPerLine, QImage.Format_RGB888).rgbSwapped()\
+                .transformed(QTransform().rotate(-90))
         else:
             self.activeCamera = None
             self.activeCameraInfo = None
