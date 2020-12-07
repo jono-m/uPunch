@@ -47,8 +47,6 @@ class Design:
 
         self.filename = ""
 
-        self.LoadFromDXFFile("test.dxf")
-
     def GetLayers(self):
         return self._layers.copy()
 

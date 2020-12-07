@@ -101,9 +101,11 @@ class MockStageSystem(StageSystem):
         if x is not None:
             self.xSettings.goal = self.xSettings.ClampAxis(x)
             self.UpdateVelocity(self.xSettings)
+            self.state = StageSystem.STATE_PAN
         if y is not None:
             self.ySettings.goal = self.ySettings.ClampAxis(y)
             self.UpdateVelocity(self.ySettings)
+            self.state = StageSystem.STATE_PAN
         if z is not None:
             self.zSettings.goal = self.zSettings.ClampAxis(z)
             self.UpdateVelocity(self.zSettings)

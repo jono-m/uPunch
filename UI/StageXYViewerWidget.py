@@ -70,9 +70,9 @@ class StageXYViewerWidget(QGraphicsView):
 
         pos = self.stageSystem.ClampPoint(self.mapToScene(event.localPos().toPoint()))
         self.coordinateDisplay.setText("[" + str(int(pos.x())) + " mm, " + str(int(pos.y())) + " mm]")
-        self.coordinateDisplay.setPos(
-            QPointF(pos.x() - self.coordinateDisplay.boundingRect().width() - 10 / self.transform().m11(),
-                    pos.y() - self.coordinateDisplay.boundingRect().height() - 10 / self.transform().m11()))
+
+        self.coordinateDisplay.setPos(self.GetCoordinateDisplayPoint(pos, self.coordinateDisplay.boundingRect()))
+
         horLine = QLineF(QPointF(self.stageRect.rect().left(), pos.y()),
                          QPointF(self.stageRect.rect().right(), pos.y()))
         vertLine = QLineF(QPointF(pos.x(), self.stageRect.rect().top()),
@@ -83,6 +83,22 @@ class StageXYViewerWidget(QGraphicsView):
         pen.setWidthF(1 / self.transform().m11())
         self.horLine.setPen(pen)
         self.vertLine.setPen(pen)
+
+    def GetCoordinateDisplayPoint(self, position: QPointF, boundingRect: QRectF):
+        centerPoint = self.stageRect.sceneBoundingRect().center()
+        point = QPointF()
+        offset = 10 / self.transform().m11()
+        if position.x() < centerPoint.x():
+            point.setX(position.x() + offset)
+        else:
+            point.setX(position.x() - boundingRect.width() - offset)
+
+        if position.y() < centerPoint.y():
+            point.setY(position.y() + offset)
+        else:
+            point.setY(position.y() - boundingRect.height() - offset)
+
+        return point
 
     def UpdateItems(self, force=False):
         if not self.isVisible() and not force:
@@ -103,10 +119,9 @@ class StageXYViewerWidget(QGraphicsView):
         self.indicatorCoordinateDisplay.setText(
             "[" + str(int(indicatorPosition[0])) + " mm, " + str(int(indicatorPosition[1])) + " mm]")
         self.indicatorCoordinateDisplay.setPos(
-            QPointF(indicatorPosition[
-                        0] - self.indicatorCoordinateDisplay.boundingRect().width() - 10 / self.transform().m11(),
-                    indicatorPosition[
-                        1] - self.indicatorCoordinateDisplay.boundingRect().height() - 10 / self.transform().m11()))
+            self.GetCoordinateDisplayPoint(QPointF(indicatorPosition[0],
+                                                   indicatorPosition[1]),
+                                           self.indicatorCoordinateDisplay.boundingRect()))
 
         horLine = QLineF(QPointF(r.left(), indicatorPosition[1]),
                          QPointF(r.right(), indicatorPosition[1]))
@@ -132,11 +147,10 @@ class StageXYViewerWidget(QGraphicsView):
         self.coordinateDisplay.setFont(f)
         self.indicatorCoordinateDisplay.setFont(f)
 
-        boundingRect = self.stageRect.rect().marginsAdded(
-            QMarginsF(160, 50, 160, 50) / self.transform().m11())
+        boundingRect = self.stageRect.rect()
         if self.sceneRect() != boundingRect:
             self.setSceneRect(boundingRect)
-            self.stageRect.scale = self.transform().m11()
+        self.stageRect.scale = self.transform().m11()
 
     def resizeEvent(self, event: QResizeEvent):
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)

@@ -41,8 +41,8 @@ class StageSettingsWidget(QFrame):
         settingsLayout.addWidget(self.zAxis)
 
         layout = QVBoxLayout()
-        layout.addLayout(settingsLayout)
-        layout.addWidget(self.stageViewer)
+        layout.addLayout(settingsLayout, stretch=0)
+        layout.addWidget(self.stageViewer, stretch=1)
         self.setLayout(layout)
 
         self.devices = None
@@ -143,6 +143,7 @@ class AxisSettingsBox(QFrame):
         self.flipField.stateChanged.connect(self.UpdateParameters)
 
         layout = QGridLayout()
+        layout.setAlignment(Qt.AlignTop)
 
         layout.addWidget(self.titleLabel, 0, 0, 1, 3)
 

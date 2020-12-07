@@ -67,7 +67,6 @@ class StageSystem:
         self.punchTimer.start()
 
     def DoPunch(self, depth):
-        print(depth)
         if self.state != StageSystem.STATE_IDLE:
             return
         self.OnPunchBegin.Invoke()

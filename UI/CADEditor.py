@@ -115,6 +115,8 @@ class CADEditor(QGraphicsView):
                 bRect = bRect.united(r)
             self._circles[c] = self.scene().addEllipse(r)
 
+        if bRect is None:
+            bRect = self.sceneRect()
         self.setSceneRect(bRect)
         self.HandleResize()
         self.Recolor()
