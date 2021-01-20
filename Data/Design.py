@@ -7,25 +7,18 @@ from ezdxf.entities.insert import Insert
 
 
 class Circle:
-    def __init__(self, center: QPointF, radius: float, layer: str, specificallyIgnored: bool):
+    def __init__(self, center: QPointF, layer: str, specificallyIgnored: bool, block: typing.Optional[str]):
         self.center = center
-        self.radius = radius
         self.layer = layer
+        self.block = block
         self.specificallyIgnored = specificallyIgnored
 
     def Copy(self):
-        return Circle(self.center, self.radius, self.layer, self.specificallyIgnored)
-
-    def GetRect(self):
-        r = QRectF()
-        r.setSize(QSizeF(self.radius * 2, self.radius * 2))
-        r.moveCenter(self.center)
-        return r
+        return Circle(self.center, self.layer, self.specificallyIgnored, self.block)
 
     def GetTransformed(self, scale=1, rotation=0, offset=QPointF()):
         newCircle = self.Copy()
 
-        newCircle.radius = newCircle.radius * scale
         newCircle.center = newCircle.center * scale
         newCircle.center = rotate(newCircle.center, rotation) + offset
         return newCircle
@@ -35,8 +28,7 @@ class Design:
     def __init__(self):
         self._circles: typing.List[Circle] = []
         self._layers: typing.Dict[str, bool] = {}
-
-        self.rect = QRectF()
+        self._blocks: typing.Dict[str, bool] = {}
 
         self.circleA: typing.Optional[Circle] = None
         self.circleB: typing.Optional[Circle] = None
@@ -50,6 +42,9 @@ class Design:
     def GetLayers(self):
         return self._layers.copy()
 
+    def GetBlocks(self):
+        return self._blocks.copy()
+
     def SetLayerEnabled(self, layerName: str, enabled: bool):
         self._layers[layerName] = enabled
 
@@ -57,6 +52,15 @@ class Design:
             if self.circleA is not None and self.circleA.layer == layerName:
                 self.circleA = None
             if self.circleB is not None and self.circleB.layer == layerName:
+                self.circleB = None
+
+    def SetBlockEnabled(self, blockName: str, enabled: bool):
+        self._blocks[blockName] = enabled
+
+        if not enabled:
+            if self.circleA is not None and self.circleA.block == blockName:
+                self.circleA = None
+            if self.circleB is not None and self.circleB.block == blockName:
                 self.circleB = None
 
     def LoadFromDXFFile(self, filename) -> typing.Optional[str]:
@@ -77,39 +81,44 @@ class Design:
             self.circleB = self._circles[1]
 
         self._layers = {}
-        self.rect = None
+        self._blocks = {}
         for circle in self._circles:
-            if self.rect is None:
-                self.rect = circle.GetRect()
-            else:
-                self.rect = self.rect.united(circle.GetRect())
             if circle.layer not in self._layers:
                 self._layers[circle.layer] = True
+            if circle.block is not None and circle.block not in self._blocks:
+                self._blocks[circle.block] = True
 
         return None
 
     def ExtractCircles(self, space: ezdxf.layouts.BaseLayout) -> typing.List[Circle]:
         circleResults = space.query('CIRCLE')
         circles = [Circle(QPointF(entity.dxf.center.x, entity.dxf.center.y) / 1000,
-                          entity.dxf.radius / 1000,
                           entity.dxf.layer,
-                          False)
+                          False,
+                          None)
                    for entity in circleResults]
         insertResults = space.query('INSERT')
         for insertResult in insertResults:
             insertResult: Insert = insertResult
-            space = insertResult.block()
-            spaceCircles = self.ExtractCircles(space)
-            for spaceCircle in spaceCircles:
-                transformed = spaceCircle.GetTransformed(insertResult.dxf.xscale, insertResult.dxf.rotation,
-                                                         QPointF(insertResult.dxf.insert.x / 1000,
-                                                                 insertResult.dxf.insert.y / 1000))
-                transformed.layer = insertResult.dxf.layer
-                circles.append(transformed)
+            name = insertResult.dxf.name
+            if name[0] == "*":
+                space = insertResult.block()
+                spaceCircles = self.ExtractCircles(space)
+                for spaceCircle in spaceCircles:
+                    transformed = spaceCircle.GetTransformed(insertResult.dxf.xscale, insertResult.dxf.rotation,
+                                                             QPointF(insertResult.dxf.insert.x / 1000,
+                                                                     insertResult.dxf.insert.y / 1000))
+                    transformed.layer = insertResult.dxf.layer
+                    circles.append(transformed)
+            else:
+                circles.append(Circle(QPointF(insertResult.dxf.insert.x, insertResult.dxf.insert.y)/1000,
+                                      insertResult.dxf.layer,
+                                      False,
+                                      insertResult.dxf.name))
         return circles
 
     def GetLocalCircles(self):
-        return [c for c in self._circles if self._layers[c.layer]]
+        return [c for c in self._circles if self._layers[c.layer] and (c.block is None or self._blocks[c.block])]
 
     def GetAlignedCircles(self):
         localCircles = [c.Copy() for c in self.GetLocalCircles()]

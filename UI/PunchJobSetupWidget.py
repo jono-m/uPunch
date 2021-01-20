@@ -209,15 +209,27 @@ class LayerList(QFrame):
             self.layerLayout.addWidget(QLabel(layer), i, 0)
             toggle = QCheckBox()
             toggle.setChecked(self.design.GetLayers()[layer])
-            toggle.stateChanged.connect(lambda state, l=layer: self.UpdateState(state, l))
+            toggle.stateChanged.connect(lambda state, l=layer: self.UpdateLayerState(state, l))
             self.layerLayout.addWidget(toggle, i, 1)
             i += 1
 
-    def UpdateState(self, state, layer):
+        for block in self.design.GetBlocks():
+            self.layerLayout.addWidget(QLabel(block), i, 0)
+            toggle = QCheckBox()
+            toggle.setChecked(self.design.GetBlocks()[block])
+            toggle.stateChanged.connect(lambda state, l=block: self.UpdateBlockState(state, l))
+            self.layerLayout.addWidget(toggle, i, 1)
+            i += 1
+
+    def UpdateLayerState(self, state, layer):
         self.design.SetLayerEnabled(layer, bool(state))
         self.Repopulate()
         self.OnChanged.Invoke()
 
+    def UpdateBlockState(self, state, block):
+        self.design.SetBlockEnabled(block, bool(state))
+        self.Repopulate()
+        self.OnChanged.Invoke()
 
 def clearLayout(layout):
     if layout is not None:
