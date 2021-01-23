@@ -22,7 +22,7 @@ class CADGraphicsItem(QGraphicsItem):
 
     def CacheCircles(self):
         self.prepareGeometryChange()
-        self.circles = self.design.GetAlignedCircles()
+        self.circles = [c for c in self.design.GetAlignedCircles() if not c.specificallyIgnored]
         self.bR = None
         for c in self.circles:
             rect = c.GetRect()

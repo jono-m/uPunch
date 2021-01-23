@@ -8,7 +8,7 @@ import time
 
 
 class StageXYViewerWidget(QGraphicsView):
-    def __init__(self, stageSystem: StageSystem):
+    def __init__(self, stageSystem: StageSystem, control=True):
         super().__init__()
 
         self.stageSystem = stageSystem

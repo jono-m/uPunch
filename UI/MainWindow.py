@@ -1,13 +1,12 @@
 from UI.CameraSettingsWidget import *
 from UI.PunchJobSetupWidget import *
-from UI.PunchTipsSettingsWidget import *
 from UI.StageSettingsWidget import *
 from StylesheetLoader import *
-from Data.PunchTips import *
 from PySide2.QtGui import *
-from UI.CalibrationWidget import *
 from Data.StageSystem import *
 from Data.MockStageSystem import *
+from UI.SwitchTipWindow import *
+from UI.SettingsWindow import *
 from Data.Design import *
 from Data.AlignmentCamera import *
 
@@ -19,20 +18,36 @@ class MainApp(QMainWindow):
         self.stageSystem = MockStageSystem(self)
         self.alignmentCamera = AlignmentCamera()
         self.calibrationSettings = CalibrationSettings()
-        self.punchTips = PunchTips()
 
-        self.tabArea = QTabWidget()
-        self.setCentralWidget(self.tabArea)
-        self.tabArea.setTabPosition(QTabWidget.West)
+        self.mainWidget = QFrame()
+        self.setCentralWidget(self.mainWidget)
 
-        self.AddTab(
-            PunchJobSetupWidget(self.punchTips, self.calibrationSettings, self.alignmentCamera, self.stageSystem),
-            "Punch Job")
-        self.AddTab(PunchTipsSettingsWidget(self.punchTips, self.stageSystem), "Punch Tips")
-        self.AddTab(CameraSettingsWidget(self.alignmentCamera), "Camera Settings")
-        self.AddTab(StageSettingsWidget(self.stageSystem), "Stage Settings")
-        self.AddTab(CalibrationWidget(self.punchTips, self.calibrationSettings, self.alignmentCamera, self.stageSystem),
-                    "Calibration")
+        self.welcomeLabel = QLabel("Welcome to μPunch.")
+        self.welcomeLabel.setAlignment(Qt.AlignCenter)
+        self.openButton = QPushButton(u"\U0001F5C1" + "\nOpen CAD... ")
+        self.openButton.clicked.connect(self.PromptOpen)
+
+        self.punchJobWidget = PunchJobSetupWidget(self.calibrationSettings, self.alignmentCamera, self.stageSystem)
+        self.punchJobWidget.setVisible(False)
+
+        self.switchTipButton = QPushButton(u"\U0001F5D8" + "\nSwitch Tip ")
+        self.switchTipButton.clicked.connect(self.OpenSwitchTipWindow)
+        self.settingsButton = QPushButton(u"\U0001F512" + "\nSettings")
+        self.settingsButton.clicked.connect(self.OpenSettingsWindow)
+
+        menuLayout = QHBoxLayout()
+        menuLayout.setAlignment(Qt.AlignRight)
+        menuLayout.addWidget(self.openButton)
+        menuLayout.addWidget(self.switchTipButton)
+        menuLayout.addWidget(self.settingsButton)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.welcomeLabel)
+        mainLayout.addLayout(menuLayout)
+        mainLayout.addWidget(self.punchJobWidget)
+
+        self.mainWidget.setLayout(mainLayout)
+
         StylesheetLoader.GetInstance().RegisterWidget(self)
 
         icon = QIcon("Assets/icon.png")
@@ -40,16 +55,33 @@ class MainApp(QMainWindow):
 
         self.setWindowTitle("μPunch")
 
-        self.tabArea.setCurrentIndex(0)
+        self.adjustSize()
+        self.setFixedSize(self.size())
 
-    def AddTab(self, widget, text):
-        self.tabArea.addTab(widget, "")
-        self.tabArea.tabBar().setTabButton(self.tabArea.count() - 1, QTabBar.LeftSide,
-                                           QLabel(text, self.tabArea.tabBar()))
+    def PromptOpen(self):
+        if self.punchJobWidget.BrowseForDXF():
+            self.openButton.setVisible(False)
+            self.welcomeLabel.setVisible(False)
+            self.punchJobWidget.setVisible(True)
+            self.setFixedSize(QSize(16777215,16777215))
+            self.resize(1200, 900)
+            self.setMinimumSize(1200, 900)
+
+    def OpenSwitchTipWindow(self):
+        switchTipWindow = SwitchTipWindow(self, self.stageSystem, self.alignmentCamera, self.calibrationSettings)
+        switchTipWindow.exec_()
+
+    def OpenSettingsWindow(self):
+        (text, go) = QInputDialog.getText(self, "Password", "Enter Password", QLineEdit.EchoMode.Password)
+        if go:
+            if text == "nfkb":
+                settingsWindow = SettingsWindow(self, self.alignmentCamera, self.stageSystem)
+                settingsWindow.exec_()
+            else:
+                QMessageBox.critical(self, "Wrong Password", "Incorrect password.")
 
     def closeEvent(self, event: QCloseEvent):
         self.stageSystem.SaveSettings()
         self.alignmentCamera.SaveSettings()
-        self.punchTips.SaveSettings()
         self.calibrationSettings.SaveSettings()
         self.alignmentCamera.DisconnectCamera()

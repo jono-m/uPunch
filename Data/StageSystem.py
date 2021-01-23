@@ -7,6 +7,7 @@ from Util import *
 from PySide2.QtWidgets import *
 import serial.tools.list_ports
 import dill
+import time
 import os
 
 Library.enable_device_db_store()
@@ -32,16 +33,26 @@ class AxisSettings:
         return min(self.absMaximum, max(self.absMinimum, val))
 
 
+class StageSettings:
+    def __init__(self):
+        self.portName = ""
+        self.tipLoadingPos = QPointF(0, 0)
+        self.tipLoadingOffset = 0
+        self.punchDepth = 0
+        self.punchPauseTime = 0
+
+
 class StageSystem:
     STATE_IDLE = 0
     STATE_PUNCH_LOWER = 1
-    STATE_PUNCH_RAISE = 2
-    STATE_PAN = 3
+    STATE_PUNCH_PAUSE = 2
+    STATE_PUNCH_RAISE = 3
+    STATE_PAN = 4
 
     def __init__(self, widgetHost: QWidget):
         self._axisList: typing.List[Axis] = []
         self._activeConnection: typing.Optional[Connection] = None
-        self.portName = ""
+        self.settings = StageSettings()
         self.OnDisconnect = Event()
 
         self.xSettings = AxisSettings(0)
@@ -60,18 +71,23 @@ class StageSystem:
 
         self._lastPosition = None
 
+        self._punchLoweredTime = 0
+
         self.state = StageSystem.STATE_IDLE
 
         self.punchTimer = QTimer(widgetHost)
         self.punchTimer.timeout.connect(self.PunchTick)
         self.punchTimer.start()
 
-    def DoPunch(self, depth):
+    def MoveToLoadSpot(self):
+        self.SetPosition(x=self.settings.tipLoadingPos.x(), y=self.settings.tipLoadingPos.y(), z=self.zSettings.minimum)
+
+    def DoPunch(self):
         if self.state != StageSystem.STATE_IDLE:
             return
         self.OnPunchBegin.Invoke()
         self.state = StageSystem.STATE_PUNCH_LOWER
-        self.SetPosition(z=depth)
+        self.SetPosition(z=self.settings.punchDepth)
 
     def RaisePunch(self):
         self.state = StageSystem.STATE_PUNCH_RAISE
@@ -83,10 +99,14 @@ class StageSystem:
                 self.state = StageSystem.STATE_IDLE
                 self.OnPunchFinish.Invoke()
             elif self.state == StageSystem.STATE_PUNCH_LOWER:
-                self.RaisePunch()
+                self._punchLoweredTime = time.time()
+                self.state = StageSystem.STATE_PUNCH_PAUSE
             elif self.state == StageSystem.STATE_PAN:
                 self.state = StageSystem.STATE_IDLE
                 self.OnPanFinish.Invoke()
+            elif self.state == StageSystem.STATE_PUNCH_PAUSE:
+                if time.time() - self._punchLoweredTime >= self.settings.punchPauseTime:
+                    self.RaisePunch()
 
     def LoadSettings(self):
         if os.path.exists("stageSettings.pkl"):
@@ -94,30 +114,35 @@ class StageSystem:
             [self.xSettings,
              self.ySettings,
              self.zSettings,
-             self.portName] = dill.load(file)
+             self.settings] = dill.load(file)
             file.close()
+
+        if self.settings.portName != "":
+            self.Connect(self.settings.portName)
+        else:
+            self.Connect(self.GetDeviceList()[0][0])
 
     def SaveSettings(self):
         file = open("stageSettings.pkl", "wb")
-        dill.dump([self.xSettings, self.ySettings, self.zSettings, self.portName], file)
+        dill.dump([self.xSettings, self.ySettings, self.zSettings, self.settings], file)
         file.close()
 
     def Connect(self, portName: str):
         self.Disconnect()
 
         if portName not in [p[0] for p in self.GetDeviceList()]:
-            self.portName = ""
+            self.settings.portName = ""
             return
         else:
-            self.portName = portName
+            self.settings.portName = portName
 
-        self._activeConnection = Connection.open_serial_port(self.portName)
+        self._activeConnection = Connection.open_serial_port(self.settings.portName)
         self._activeConnection.disconnected.subscribe(lambda alert: self.OnDisconnect.Invoke())
         try:
             self._axisList = [device.get_axis(1) for device in self._activeConnection.detect_devices()]
         except:
             self._activeConnection = None
-            self.portName = ""
+            self.settings.portName = ""
             return
 
         devices = self._activeConnection.detect_devices()

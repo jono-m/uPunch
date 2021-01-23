@@ -6,14 +6,6 @@ QTabBar QLabel {
 CameraViewer{
 	border: 2px solid black;
 }
-PunchTipsSettingsWidget QToolButton {
-	min-width: 40px;
-	max-width: 40px;
-}
-#PunchTipOptions {
-	border: 1px solid black;
-	border-width: 0 0 0 1px;
-}
 StageControllerWidget {
 	background-color: rgb(40, 40, 40);
 	border: 5px inset rgb(100, 100, 100);
@@ -45,13 +37,16 @@ StageControllerWidget Spacer {
 	border-right-width: 1px;
 	margin: 0 20px 0 20px; 
 }
-LayerList {
-	border: 1px solid black;
-}
 QPushButton[NextButton="true"] {
 	font-weight: bold;
 }
 
 AlignmentWidget CameraViewerWidget {
 	max-width: 0px;
+}
+QPushButton[markDone="true"] {
+	background-color: green;
+}
+QPushButton[markDone="false"] {
+	background-color: red;
 }

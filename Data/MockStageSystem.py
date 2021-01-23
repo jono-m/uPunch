@@ -12,11 +12,11 @@ class MockAxisSettings(AxisSettings):
 
 class MockStageSystem(StageSystem):
     def __init__(self, hostWidget: QWidget):
+        super().__init__(hostWidget)
+
         self.xSettings = MockAxisSettings(0)
         self.ySettings = MockAxisSettings(1)
         self.zSettings = MockAxisSettings(2)
-
-        super().__init__(hostWidget)
 
         self._connected = False
 
@@ -27,7 +27,7 @@ class MockStageSystem(StageSystem):
     def Connect(self, portName: str):
         self._connected = True
         self._homed = False
-        self.portName = portName
+        self.settings.portName = portName
 
     def GetAxisName(self, axis: AxisSettings) -> str:
         return "Mock Axis"
@@ -37,7 +37,7 @@ class MockStageSystem(StageSystem):
 
     def Disconnect(self):
         self._connected = False
-        self.portName = "NOT CONNECTED"
+        self.settings.portName = "NOT CONNECTED"
 
     def HomeAll(self):
         self.xSettings.position = 0

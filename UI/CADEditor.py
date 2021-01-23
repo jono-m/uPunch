@@ -30,9 +30,6 @@ class CADEditor(QGraphicsView):
 
         self.setMouseTracking(True)
 
-        self.legendWidget = LegendWidget()
-        self.scene().addItem(self.legendWidget)
-
         self.infoText = self.scene().addSimpleText("")
 
         self.aLabel = self.scene().addSimpleText("A")
@@ -68,15 +65,13 @@ class CADEditor(QGraphicsView):
         if not self.isEnabled():
             return
         itemsUnderMouse = self.scene().items(self.mapToScene(event.localPos().toPoint()))
-        smallestCircle = None
+        self._hoverCircle = None
         for itemUnderMouse in itemsUnderMouse:
             if itemUnderMouse in self._circles.values():
                 circle = list(self._circles.keys())[list(self._circles.values()).index(itemUnderMouse)]
-                if smallestCircle is None or circle.radius < smallestCircle.radius:
-                    if self.CanHoverFunc(circle):
-                        smallestCircle = circle
-
-        self._hoverCircle = smallestCircle
+                if self.CanHoverFunc(circle):
+                    self._hoverCircle = circle
+                    break
 
         if self._hoverCircle is None:
             self.setCursor(Qt.ArrowCursor)
@@ -100,8 +95,6 @@ class CADEditor(QGraphicsView):
         self._circles.clear()
 
         bRect = None
-
-        self.legendWidget.setVisible(not self.hideIgnored)
 
         for c in self.design.GetLocalCircles():
             if self.hideIgnored:
@@ -138,8 +131,6 @@ class CADEditor(QGraphicsView):
                 self._normalPen.setColor(color)
                 self._circles[c].setPen(self._normalPen)
 
-            self._circles[c].setZValue(-c.radius)
-
         if self.design.circleA is None:
             self.aLabel.setVisible(False)
         else:
@@ -147,7 +138,7 @@ class CADEditor(QGraphicsView):
             centerPt = self._circles[self.design.circleA].sceneBoundingRect().center()
             r = self.aLabel.sceneBoundingRect()
             r.moveCenter(centerPt)
-            self.aLabel.setPos(r.topLeft())
+            self.aLabel.setPos(r.topLeft() + QPointF(-2, -2))
 
         if self.design.circleB is None:
             self.bLabel.setVisible(False)
@@ -156,7 +147,7 @@ class CADEditor(QGraphicsView):
             centerPt = self._circles[self.design.circleB].sceneBoundingRect().center()
             r = self.bLabel.sceneBoundingRect()
             r.moveCenter(centerPt)
-            self.bLabel.setPos(r.topLeft())
+            self.bLabel.setPos(r.topLeft() + QPointF(-2, -2))
 
         p = self.mapToScene(QPoint(self.width()/2.0, 20))
         r = self.infoText.sceneBoundingRect()
@@ -169,9 +160,6 @@ class CADEditor(QGraphicsView):
 
         self._hoverPen.setWidthF(2 / self.transform().m11())
         self._normalPen.setWidthF(1 / self.transform().m11())
-
-        self.legendWidget.setPos(self.mapToScene(QPoint(20, 20)))
-        self.legendWidget.setScale(1 / self.transform().m11())
 
         self.aLabel.setScale(1/self.transform().m11())
         self.bLabel.setScale(1/self.transform().m11())
@@ -189,47 +177,3 @@ class CADEditor(QGraphicsView):
             self.infoText.setVisible(True)
             self.infoText.setText(text)
         self.Recolor()
-
-
-class LegendWidget(QGraphicsProxyWidget):
-    def __init__(self):
-        super().__init__()
-
-        widget = QFrame()
-
-        self.setWidget(widget)
-
-        widget.setStyleSheet("""
-        * {
-        background-color: transparent;
-        }
-        QLabel {
-        padding: 15px;
-        }
-        """)
-
-        layout = QVBoxLayout()
-
-        a = QLabel("To Punch")
-        a.setAlignment(Qt.AlignCenter)
-        a.setStyleSheet("""* {
-        background-color: rgba(100, 255, 100, 255);
-        font-weight: bold;
-        }""")
-        b = QLabel("Ignored")
-        b.setAlignment(Qt.AlignCenter)
-        b.setStyleSheet("""* {
-        background-color: rgba(255, 100, 100, 255);
-        font-weight: bold;
-        }""")
-
-        layout.addWidget(a)
-        layout.addWidget(b)
-
-        layout.setAlignment(Qt.AlignTop)
-
-        layout.setSpacing(0)
-
-        widget.setLayout(layout)
-
-        widget.adjustSize()

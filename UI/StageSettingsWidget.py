@@ -23,6 +23,57 @@ class StageSettingsWidget(QFrame):
         self.yAxis.OnSettingsChanged.Register(self.stageSystem.FlushSettings)
         self.zAxis.OnSettingsChanged.Register(self.stageSystem.FlushSettings)
 
+        self.tipLoadingLabel = QLabel("Tip Loading Position")
+        self.tipLoadingLabelX = QLabel("X (mm): ")
+        self.tipLoadingLabelY = QLabel("Y (mm): ")
+        self.tipLoadingLabelOffset = QLabel("Loading Depth Offset (mm): ")
+        self.tipLoadingFieldX = QDoubleSpinBox()
+        self.tipLoadingFieldX.setMinimum(0)
+        self.tipLoadingFieldX.setMaximum(350)
+        self.tipLoadingFieldX.valueChanged.connect(self.UpdateParameters)
+        self.tipLoadingFieldY = QDoubleSpinBox()
+        self.tipLoadingFieldY.setMinimum(0)
+        self.tipLoadingFieldY.setMaximum(350)
+        self.tipLoadingFieldY.valueChanged.connect(self.UpdateParameters)
+        self.tipLoadingCurrentButton = QPushButton("Set To Current")
+        self.tipLoadingCurrentButton.clicked.connect(self.SetTipToCurrent)
+
+        self.tipLoadingFieldOffset = QDoubleSpinBox()
+        self.tipLoadingFieldOffset.setMinimum(0)
+        self.tipLoadingFieldOffset.setMaximum(350)
+        self.tipLoadingFieldOffset.valueChanged.connect(self.UpdateParameters)
+
+        self.punchDepthLabel = QLabel("Punch Depth (mm): ")
+        self.punchDepthField = QDoubleSpinBox()
+        self.punchDepthField.setMinimum(0)
+        self.punchDepthField.setMaximum(350)
+        self.punchDepthField.valueChanged.connect(self.UpdateParameters)
+        self.punchDepthCurrentButton = QPushButton("Set To Current")
+        self.punchDepthCurrentButton.clicked.connect(self.SetPunchDepthToCurrent)
+
+        self.punchPauseLabel = QLabel("Punch Pause Time (sec): ")
+        self.punchPauseField = QDoubleSpinBox()
+        self.punchPauseField.setMinimum(0)
+        self.punchPauseField.setMaximum(2)
+        self.punchPauseField.valueChanged.connect(self.UpdateParameters)
+
+        stageSettingsLayout = QGridLayout()
+        stageSettingsLayout.addWidget(self.tipLoadingLabel, 0, 0, 1, 2)
+        stageSettingsLayout.addWidget(self.tipLoadingLabelX, 1, 0)
+        stageSettingsLayout.addWidget(self.tipLoadingFieldX, 1, 1)
+        stageSettingsLayout.addWidget(self.tipLoadingLabelY, 2, 0)
+        stageSettingsLayout.addWidget(self.tipLoadingFieldY, 2, 1)
+        stageSettingsLayout.addWidget(self.tipLoadingCurrentButton, 3, 0, 1, 2)
+        stageSettingsLayout.addWidget(self.tipLoadingLabelOffset, 4, 0)
+        stageSettingsLayout.addWidget(self.tipLoadingFieldOffset, 4, 1)
+        stageSettingsLayout.addWidget(self.punchDepthLabel, 5, 0)
+        stageSettingsLayout.addWidget(self.punchDepthField, 5, 1)
+        stageSettingsLayout.addWidget(self.punchDepthCurrentButton, 6, 0, 1, 2)
+        stageSettingsLayout.addWidget(self.punchPauseLabel, 7, 0)
+        stageSettingsLayout.addWidget(self.punchPauseField, 7, 1)
+
+        stageSettingsLayout.setAlignment(Qt.AlignTop)
+
         settingsLayout = QHBoxLayout()
 
         deviceLayout = QVBoxLayout()
@@ -42,12 +93,55 @@ class StageSettingsWidget(QFrame):
 
         layout = QVBoxLayout()
         layout.addLayout(settingsLayout, stretch=0)
-        layout.addWidget(self.stageViewer, stretch=1)
+
+        svLayout = QHBoxLayout()
+        svLayout.addWidget(self.stageViewer, stretch=1)
+        svLayout.addLayout(stageSettingsLayout)
+
+        layout.addLayout(svLayout)
+
         self.setLayout(layout)
 
         self.devices = None
 
         self.Rescan()
+
+        self.UpdateFields()
+
+    def SetTipToCurrent(self):
+        self.tipLoadingFieldX.setValue(self.stageSystem.GetPosition(self.stageSystem.xSettings))
+        self.tipLoadingFieldY.setValue(self.stageSystem.GetPosition(self.stageSystem.ySettings))
+
+    def UpdateParameters(self):
+        self.stageSystem.settings.tipLoadingPos = QPointF(self.tipLoadingFieldX.value(),
+                                                          self.tipLoadingFieldY.value())
+        self.stageSystem.settings.tipLoadingOffset = self.tipLoadingFieldOffset.value()
+        self.stageSystem.settings.punchDepth = self.punchDepthField.value()
+        self.stageSystem.settings.punchPauseTime = self.punchPauseField.value()
+
+        self.UpdateFields()
+
+    def UpdateFields(self):
+        self.tipLoadingFieldX.blockSignals(True)
+        self.tipLoadingFieldY.blockSignals(True)
+        self.tipLoadingFieldOffset.blockSignals(True)
+        self.punchPauseField.blockSignals(True)
+        self.punchDepthField.blockSignals(True)
+
+        self.tipLoadingFieldX.setValue(self.stageSystem.settings.tipLoadingPos.x())
+        self.tipLoadingFieldY.setValue(self.stageSystem.settings.tipLoadingPos.y())
+        self.tipLoadingFieldOffset.setValue(self.stageSystem.settings.tipLoadingOffset)
+        self.punchDepthField.setValue(self.stageSystem.settings.punchDepth)
+        self.punchPauseField.setValue(self.stageSystem.settings.punchPauseTime)
+
+        self.tipLoadingFieldX.blockSignals(False)
+        self.tipLoadingFieldY.blockSignals(False)
+        self.tipLoadingFieldOffset.blockSignals(False)
+        self.punchPauseField.blockSignals(False)
+        self.punchDepthField.blockSignals(False)
+
+    def SetPunchDepthToCurrent(self):
+        self.punchDepthField.setValue(self.stageSystem.GetPosition(self.stageSystem.zSettings))
 
     def HandleSelection(self, index):
         self.stageSystem.Connect(self.devices[index][0])
@@ -67,7 +161,7 @@ class StageSettingsWidget(QFrame):
         sIndex = -1
         for (port, description) in self.devices:
             self.deviceList.addItem(description + " (" + port + ")")
-            if port == self.stageSystem.portName:
+            if port == self.stageSystem.settings.portName:
                 sIndex = self.deviceList.count() - 1
 
         self.deviceList.blockSignals(False)
@@ -77,8 +171,6 @@ class StageSettingsWidget(QFrame):
         else:
             if self.deviceList.count() > 0:
                 self.deviceList.setCurrentRow(max(0, lastIndex - 1))
-            else:
-                self.stageSystem.Disconnect()
 
 
 class AxisSettingsBox(QFrame):

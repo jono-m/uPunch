@@ -7,14 +7,14 @@ from ezdxf.entities.insert import Insert
 
 
 class Circle:
-    def __init__(self, center: QPointF, layer: str, specificallyIgnored: bool, block: typing.Optional[str]):
+    def __init__(self, center: QPointF, layers: typing.List[str], specificallyIgnored: bool, blocks: typing.List[str]):
         self.center = center
-        self.layer = layer
-        self.block = block
+        self.layers = layers
+        self.blocks = blocks
         self.specificallyIgnored = specificallyIgnored
 
     def Copy(self):
-        return Circle(self.center, self.layer, self.specificallyIgnored, self.block)
+        return Circle(self.center, self.layers, self.specificallyIgnored, self.blocks)
 
     def GetTransformed(self, scale=1, rotation=0, offset=QPointF()):
         newCircle = self.Copy()
@@ -22,6 +22,12 @@ class Circle:
         newCircle.center = newCircle.center * scale
         newCircle.center = rotate(newCircle.center, rotation) + offset
         return newCircle
+
+    def GetRect(self):
+        r = QRectF()
+        r.moveCenter(self.center)
+        r.setSize(QSizeF(1, 1))
+        return r
 
 
 class Design:
@@ -47,20 +53,35 @@ class Design:
 
     def SetLayerEnabled(self, layerName: str, enabled: bool):
         self._layers[layerName] = enabled
-
         if not enabled:
-            if self.circleA is not None and self.circleA.layer == layerName:
+            if not self.IsCircleOn(self.circleA):
                 self.circleA = None
-            if self.circleB is not None and self.circleB.layer == layerName:
+            if not self.IsCircleOn(self.circleB):
                 self.circleB = None
+
+    def IsCircleOn(self, circle: typing.Optional[Circle]):
+        if circle is None:
+            return False
+
+        aLayerOn = False
+        aBlockOn = False
+        for layer in circle.layers:
+            if self._layers[layer]:
+                aLayerOn = True
+                break
+        for block in circle.blocks:
+            if block is None or self._blocks[block]:
+                aBlockOn = True
+                break
+        return aLayerOn and aBlockOn
 
     def SetBlockEnabled(self, blockName: str, enabled: bool):
         self._blocks[blockName] = enabled
 
         if not enabled:
-            if self.circleA is not None and self.circleA.block == blockName:
+            if not self.IsCircleOn(self.circleA):
                 self.circleA = None
-            if self.circleB is not None and self.circleB.block == blockName:
+            if not self.IsCircleOn(self.circleB):
                 self.circleB = None
 
     def LoadFromDXFFile(self, filename) -> typing.Optional[str]:
@@ -69,13 +90,17 @@ class Design:
         modelSpace = ezdxf.readfile(filename).modelspace()
 
         circles = self.ExtractCircles(modelSpace)
-        points = []
-        self._circles = []
+        centerCircleDict: typing.Dict[typing.Tuple[float, float], Circle] = {}
+        print("Done")
         for c in circles:
-            if c.center not in points:
-                self._circles.append(c)
-                points.append(c.center)
+            center = (c.center.x(), c.center.y())
+            if center in centerCircleDict:
+                centerCircleDict[center].layers.append(c.layers[0])
+                centerCircleDict[center].blocks.append(c.blocks[0])
+            else:
+                centerCircleDict[center] = c
 
+        self._circles = list(centerCircleDict.values())
         if len(self._circles) >= 2:
             self.circleA = self._circles[0]
             self.circleB = self._circles[1]
@@ -83,19 +108,21 @@ class Design:
         self._layers = {}
         self._blocks = {}
         for circle in self._circles:
-            if circle.layer not in self._layers:
-                self._layers[circle.layer] = True
-            if circle.block is not None and circle.block not in self._blocks:
-                self._blocks[circle.block] = True
+            for layer in circle.layers:
+                if layer not in self._layers:
+                    self._layers[layer] = True
+            for block in circle.blocks:
+                if block is not None and block not in self._blocks:
+                    self._blocks[block] = True
 
         return None
 
     def ExtractCircles(self, space: ezdxf.layouts.BaseLayout) -> typing.List[Circle]:
         circleResults = space.query('CIRCLE')
         circles = [Circle(QPointF(entity.dxf.center.x, entity.dxf.center.y) / 1000,
-                          entity.dxf.layer,
+                          [entity.dxf.layer],
                           False,
-                          None)
+                          [None])
                    for entity in circleResults]
         insertResults = space.query('INSERT')
         for insertResult in insertResults:
@@ -111,14 +138,14 @@ class Design:
                     transformed.layer = insertResult.dxf.layer
                     circles.append(transformed)
             else:
-                circles.append(Circle(QPointF(insertResult.dxf.insert.x, insertResult.dxf.insert.y)/1000,
-                                      insertResult.dxf.layer,
+                circles.append(Circle(QPointF(insertResult.dxf.insert.x, insertResult.dxf.insert.y) / 1000,
+                                      [insertResult.dxf.layer],
                                       False,
-                                      insertResult.dxf.name))
+                                      [insertResult.dxf.name]))
         return circles
 
     def GetLocalCircles(self):
-        return [c for c in self._circles if self._layers[c.layer] and (c.block is None or self._blocks[c.block])]
+        return [c for c in self._circles if self.IsCircleOn(c)]
 
     def GetAlignedCircles(self):
         localCircles = [c.Copy() for c in self.GetLocalCircles()]
@@ -137,7 +164,7 @@ class Design:
         else:
             s = globalDist / localDist
 
-        theta = signedAngle(localB-localA, self.globalB - self.globalA)
+        theta = signedAngle(localB - localA, self.globalB - self.globalA)
         globalCircles = []
         for c in localCircles:
             transformedCircle = c.Copy()
@@ -147,7 +174,7 @@ class Design:
             transformedCircle.center = transformedCircle.center + self.globalA  # Relative to global A
             globalCircles.append(transformedCircle)
 
-        return [c for c in globalCircles if not c.specificallyIgnored]
+        return globalCircles
 
 
 def rotate(a: QPointF, theta):

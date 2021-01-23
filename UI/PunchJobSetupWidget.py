@@ -4,11 +4,10 @@ from UI.PunchJobDialog import *
 
 
 class PunchJobSetupWidget(QFrame):
-    def __init__(self, punchTips: PunchTips, calibrationSettings: CalibrationSettings, alignmentCamera: AlignmentCamera,
+    def __init__(self, calibrationSettings: CalibrationSettings, alignmentCamera: AlignmentCamera,
                  stageSystem: StageSystem):
         super().__init__()
 
-        self.punchTips = punchTips
         self.calibrationSettings = calibrationSettings
         self.alignmentCamera = alignmentCamera
         self.stageSystem = stageSystem
@@ -26,6 +25,9 @@ class PunchJobSetupWidget(QFrame):
         self.cadViewer.CanHoverFunc = self.CanHoverCircle
         self.layerList = LayerList(self.design)
         self.layerList.OnChanged.Register(self.UpdateView)
+
+        self.blockList = BlockList(self.design)
+        self.blockList.OnChanged.Register(self.UpdateView)
 
         self.circleCount = QLabel("")
 
@@ -64,13 +66,14 @@ class PunchJobSetupWidget(QFrame):
         sideLayout = QVBoxLayout()
         sideLayout.setAlignment(Qt.AlignTop)
         sideLayout.addWidget(self.layerList, stretch=1)
+        sideLayout.addWidget(self.blockList, stretch=1)
         sideLayout.addLayout(ABLayout, stretch=0)
         sideLayout.addWidget(self.circleCount)
         sideLayout.addWidget(self.alignmentButton)
 
         cadLayout = QHBoxLayout()
-        cadLayout.addWidget(self.cadViewer)
-        cadLayout.addLayout(sideLayout)
+        cadLayout.addWidget(self.cadViewer, stretch=1)
+        cadLayout.addLayout(sideLayout, stretch=0)
 
         layout.addLayout(fileLayout)
         layout.addLayout(cadLayout)
@@ -113,7 +116,7 @@ class PunchJobSetupWidget(QFrame):
         self.UpdateView()
 
     def OpenAlignmentWindow(self):
-        dialog = PunchJobDialog(self, self.design, self.punchTips, self.calibrationSettings, self.alignmentCamera,
+        dialog = PunchJobDialog(self, self.design, self.calibrationSettings, self.alignmentCamera,
                                 self.stageSystem)
         dialog.exec_()
 
@@ -172,12 +175,15 @@ class PunchJobSetupWidget(QFrame):
                     msg.setInformativeText(ret)
                     msg.setWindowTitle("DXF Load Error")
                     msg.exec_()
-
-        self.UpdateView()
+                else:
+                    self.UpdateView()
+                    return True
+        return False
 
     def UpdateView(self):
         self.fileField.setText(self.design.filename)
         self.layerList.Repopulate()
+        self.blockList.Repopulate()
         self.cadViewer.RefreshDesign()
         self.UpdateAB()
         self.circleCount.setText("<b>" + str(
@@ -192,6 +198,10 @@ class LayerList(QFrame):
 
         self.OnChanged = Event()
 
+        self.scrollArea = QScrollArea()
+
+        self.contents = QFrame()
+
         mainLayout = QVBoxLayout()
         mainLayout.setAlignment(Qt.AlignTop)
         mainLayout.addWidget(QLabel("<b>Active Layers:</b>"))
@@ -199,26 +209,27 @@ class LayerList(QFrame):
         self.layerLayout = QGridLayout()
         self.layerLayout.setAlignment(Qt.AlignTop)
         mainLayout.addLayout(self.layerLayout)
-        self.setLayout(mainLayout)
+        self.contents.setLayout(mainLayout)
+
+        self.scrollArea.setWidget(self.contents)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.scrollArea)
+        self.setLayout(layout)
 
     def Repopulate(self):
         clearLayout(self.layerLayout)
 
         i = 0
         for layer in self.design.GetLayers():
-            self.layerLayout.addWidget(QLabel(layer), i, 0)
+            self.layerLayout.addWidget(QLabel(layer), i, 1)
             toggle = QCheckBox()
             toggle.setChecked(self.design.GetLayers()[layer])
             toggle.stateChanged.connect(lambda state, l=layer: self.UpdateLayerState(state, l))
-            self.layerLayout.addWidget(toggle, i, 1)
-            i += 1
-
-        for block in self.design.GetBlocks():
-            self.layerLayout.addWidget(QLabel(block), i, 0)
-            toggle = QCheckBox()
-            toggle.setChecked(self.design.GetBlocks()[block])
-            toggle.stateChanged.connect(lambda state, l=block: self.UpdateBlockState(state, l))
-            self.layerLayout.addWidget(toggle, i, 1)
+            self.layerLayout.addWidget(toggle, i, 0)
             i += 1
 
     def UpdateLayerState(self, state, layer):
@@ -226,10 +237,55 @@ class LayerList(QFrame):
         self.Repopulate()
         self.OnChanged.Invoke()
 
+
+class BlockList(QFrame):
+    def __init__(self, design: Design):
+        super().__init__()
+
+        self.design = design
+
+        self.OnChanged = Event()
+
+        self.scrollArea = QScrollArea()
+
+        self.contents = QFrame()
+
+        mainLayout = QVBoxLayout()
+        mainLayout.setAlignment(Qt.AlignTop)
+        mainLayout.addWidget(QLabel("<b>Active Blocks:</b>"))
+
+        self.blockLayout = QGridLayout()
+        self.blockLayout.setAlignment(Qt.AlignTop)
+        mainLayout.addLayout(self.blockLayout)
+        self.contents.setLayout(mainLayout)
+
+        self.scrollArea.setWidget(self.contents)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.scrollArea)
+        self.setLayout(layout)
+
+    def Repopulate(self):
+        clearLayout(self.blockLayout)
+
+        i = 0
+        for block in self.design.GetBlocks():
+            self.blockLayout.addWidget(QLabel(block), i, 1)
+            toggle = QCheckBox()
+            toggle.setChecked(self.design.GetBlocks()[block])
+            toggle.stateChanged.connect(lambda state, l=block: self.UpdateBlockState(state, l))
+            self.blockLayout.addWidget(toggle, i, 0)
+            i += 1
+
     def UpdateBlockState(self, state, block):
         self.design.SetBlockEnabled(block, bool(state))
         self.Repopulate()
         self.OnChanged.Invoke()
+
 
 def clearLayout(layout):
     if layout is not None:
