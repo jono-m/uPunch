@@ -33,7 +33,10 @@ class CADGraphicsItem(QGraphicsItem):
         self.update()
 
     def boundingRect(self):
-        return self.bR
+        if self.bR is None:
+            return QRectF()
+        else:
+            return self.bR
 
     def paint(self, painter: QPainter, option, widget, PySide2_QtWidgets_QWidget=None, NoneType=None, *args, **kwargs):
         painter.setPen(Qt.NoPen)

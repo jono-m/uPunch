@@ -35,8 +35,6 @@ class StageXYViewerWidget(QGraphicsView):
         self.horLine = self.scene().addLine(QLineF())
         self.vertLine = self.scene().addLine(QLineF())
 
-        self.setMinimumSize(500, 500)
-
         self.timer = QTimer()
         self.timer.timeout.connect(self.UpdateItems)
         self.timer.start(30)

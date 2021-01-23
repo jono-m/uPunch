@@ -101,9 +101,6 @@ class Design:
                 centerCircleDict[center] = c
 
         self._circles = list(centerCircleDict.values())
-        if len(self._circles) >= 2:
-            self.circleA = self._circles[0]
-            self.circleB = self._circles[1]
 
         self._layers = {}
         self._blocks = {}
@@ -149,9 +146,11 @@ class Design:
 
     def GetAlignedCircles(self):
         localCircles = [c.Copy() for c in self.GetLocalCircles()]
+        if self.circleA is None or self.circleB is None:
+            return localCircles
         localA = self.circleA.center
         localB = self.circleB.center
-        if self.flipY:
+        if not self.flipY:
             for c in localCircles:
                 c.center = QPointF(c.center.x(), -c.center.y())
             localA = QPointF(localA.x(), -localA.y())

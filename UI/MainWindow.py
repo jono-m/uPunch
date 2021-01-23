@@ -1,5 +1,6 @@
 from UI.CameraSettingsWidget import *
 from UI.PunchJobSetupWidget import *
+from UI.PunchJobAlignmentWidget import *
 from UI.StageSettingsWidget import *
 from StylesheetLoader import *
 from PySide2.QtGui import *
@@ -22,13 +23,13 @@ class MainApp(QMainWindow):
         self.mainWidget = QFrame()
         self.setCentralWidget(self.mainWidget)
 
-        self.welcomeLabel = QLabel("Welcome to μPunch.")
-        self.welcomeLabel.setAlignment(Qt.AlignCenter)
-        self.openButton = QPushButton(u"\U0001F5C1" + "\nOpen CAD... ")
-        self.openButton.clicked.connect(self.PromptOpen)
-
         self.punchJobWidget = PunchJobSetupWidget(self.calibrationSettings, self.alignmentCamera, self.stageSystem)
-        self.punchJobWidget.setVisible(False)
+        self.punchJobWidget.OnNext.Register(self.GoToAlignment)
+
+        self.punchJobAlignmentWidget = PunchJobAlignmentWidget(self.punchJobWidget.design, self.calibrationSettings,
+                                                               self.alignmentCamera, self.stageSystem)
+        self.punchJobAlignmentWidget.OnCancel.Register(lambda: self.jobLayout.setCurrentIndex(0))
+        self.punchJobAlignmentWidget.OnNext.Register(lambda: self.jobLayout.setCurrentIndex(2))
 
         self.switchTipButton = QPushButton(u"\U0001F5D8" + "\nSwitch Tip ")
         self.switchTipButton.clicked.connect(self.OpenSwitchTipWindow)
@@ -37,16 +38,21 @@ class MainApp(QMainWindow):
 
         menuLayout = QHBoxLayout()
         menuLayout.setAlignment(Qt.AlignRight)
-        menuLayout.addWidget(self.openButton)
         menuLayout.addWidget(self.switchTipButton)
         menuLayout.addWidget(self.settingsButton)
 
         mainLayout = QVBoxLayout()
-        mainLayout.addWidget(self.welcomeLabel)
         mainLayout.addLayout(menuLayout)
-        mainLayout.addWidget(self.punchJobWidget)
 
+        self.jobLayout = QStackedLayout()
+        self.jobLayout.addWidget(self.punchJobWidget)
+        self.jobLayout.addWidget(self.punchJobAlignmentWidget)
+        self.jobLayout.setCurrentIndex(0)
+
+        mainLayout.addLayout(self.jobLayout)
         self.mainWidget.setLayout(mainLayout)
+
+        self.setMinimumSize(1600, 900)
 
         StylesheetLoader.GetInstance().RegisterWidget(self)
 
@@ -55,17 +61,11 @@ class MainApp(QMainWindow):
 
         self.setWindowTitle("μPunch")
 
-        self.adjustSize()
-        self.setFixedSize(self.size())
+        self.showMaximized()
 
-    def PromptOpen(self):
-        if self.punchJobWidget.BrowseForDXF():
-            self.openButton.setVisible(False)
-            self.welcomeLabel.setVisible(False)
-            self.punchJobWidget.setVisible(True)
-            self.setFixedSize(QSize(16777215,16777215))
-            self.resize(1200, 900)
-            self.setMinimumSize(1200, 900)
+    def GoToAlignment(self):
+        self.punchJobAlignmentWidget.Begin()
+        self.jobLayout.setCurrentIndex(1)
 
     def OpenSwitchTipWindow(self):
         switchTipWindow = SwitchTipWindow(self, self.stageSystem, self.alignmentCamera, self.calibrationSettings)

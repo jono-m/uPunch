@@ -77,8 +77,8 @@ class CameraViewerWidget(QLabel):
 
         image = self.camera.GetImage()
         if image is not None:
-            self.setFixedSize(self.camera.GetResolution())
-            self.setPixmap(QPixmap.fromImage(image))
+            self.setMinimumSize(self.camera.GetResolution())
+            self.setPixmap(QPixmap.fromImage(image).scaled(self.size(), Qt.KeepAspectRatio))
         else:
             self.setMinimumSize(QSize(200, 200))
             self.setPixmap(None)
@@ -86,3 +86,8 @@ class CameraViewerWidget(QLabel):
 
     def closeEvent(self, event: QCloseEvent):
         self.timer.stop()
+
+    def resizeEvent(self, event):
+        if self.pixmap() is not None:
+            self.setPixmap(self.pixmap().scaled(self.size(), Qt.KeepAspectRatio))
+        super().resizeEvent(event)

@@ -22,20 +22,15 @@ class CADEditor(QGraphicsView):
 
         self._onBrush = QBrush(QColor(100, 255, 100, 255))
         self._offBrush = QBrush(QColor(255, 100, 100, 255))
-        self._alignBrush = QBrush(QColor(150, 150, 255, 255))
+        self._highlightBrush = QBrush(QColor(150, 150, 255, 255))
         self._hoverPen = QPen(QColor(30, 30, 30))
         self._normalPen = QPen(QColor(30, 30, 30))
+
+        self.highlightCircle: typing.Optional[Circle] = None
 
         self._circles: typing.Dict[Circle, QGraphicsEllipseItem] = {}
 
         self.setMouseTracking(True)
-
-        self.infoText = self.scene().addSimpleText("")
-
-        self.aLabel = self.scene().addSimpleText("A")
-        self.bLabel = self.scene().addSimpleText("B")
-
-        self.setMinimumSize(300, 300)
 
         self.hideIgnored = False
 
@@ -121,8 +116,8 @@ class CADEditor(QGraphicsView):
             else:
                 self._circles[c].setBrush(self._onBrush)
 
-            if c == self.design.circleA or c == self.design.circleB:
-                self._circles[c].setBrush(self._alignBrush)
+            if c == self.highlightCircle:
+                self._circles[c].setBrush(self._highlightBrush)
 
             if c == self._hoverCircle:
                 self._circles[c].setPen(self._hoverPen)
@@ -131,49 +126,13 @@ class CADEditor(QGraphicsView):
                 self._normalPen.setColor(color)
                 self._circles[c].setPen(self._normalPen)
 
-        if self.design.circleA is None:
-            self.aLabel.setVisible(False)
-        else:
-            self.aLabel.setVisible(True)
-            centerPt = self._circles[self.design.circleA].sceneBoundingRect().center()
-            r = self.aLabel.sceneBoundingRect()
-            r.moveCenter(centerPt)
-            self.aLabel.setPos(r.topLeft() + QPointF(-2, -2))
-
-        if self.design.circleB is None:
-            self.bLabel.setVisible(False)
-        else:
-            self.bLabel.setVisible(True)
-            centerPt = self._circles[self.design.circleB].sceneBoundingRect().center()
-            r = self.bLabel.sceneBoundingRect()
-            r.moveCenter(centerPt)
-            self.bLabel.setPos(r.topLeft() + QPointF(-2, -2))
-
-        p = self.mapToScene(QPoint(self.width()/2.0, 20))
-        r = self.infoText.sceneBoundingRect()
-        r.moveCenter(p)
-        r.setTop(p.y())
-        self.infoText.setPos(r.topLeft())
-
     def HandleResize(self):
-        self.fitInView(ScaleRectCenter(self.sceneRect(), 1.4), Qt.KeepAspectRatio)
+        self.fitInView(ScaleRectCenter(self.sceneRect(), 1.2), Qt.KeepAspectRatio)
 
         self._hoverPen.setWidthF(2 / self.transform().m11())
         self._normalPen.setWidthF(1 / self.transform().m11())
 
-        self.aLabel.setScale(1/self.transform().m11())
-        self.bLabel.setScale(1/self.transform().m11())
-        self.infoText.setScale(1/self.transform().m11())
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.HandleResize()
-        self.Recolor()
-
-    def SetInfoText(self, text: typing.Optional[str]):
-        if text is None:
-            self.infoText.setVisible(False)
-        else:
-            self.infoText.setVisible(True)
-            self.infoText.setText(text)
         self.Recolor()

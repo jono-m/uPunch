@@ -30,7 +30,6 @@ class StageZViewerWidget(QGraphicsView):
         self.horLine = self.scene().addLine(QLineF(), QPen(Qt.white))
 
         self.setFixedWidth(100)
-        self.setMinimumHeight(300)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.UpdateItems)

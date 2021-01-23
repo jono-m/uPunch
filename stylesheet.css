@@ -37,16 +37,3 @@ StageControllerWidget Spacer {
 	border-right-width: 1px;
 	margin: 0 20px 0 20px; 
 }
-QPushButton[NextButton="true"] {
-	font-weight: bold;
-}
-
-AlignmentWidget CameraViewerWidget {
-	max-width: 0px;
-}
-QPushButton[markDone="true"] {
-	background-color: green;
-}
-QPushButton[markDone="false"] {
-	background-color: red;
-}
