@@ -20,7 +20,7 @@ class PunchJobAlignmentWidget(QFrame):
                        "Align the camera to the first point.",
                        "Select the second point to be used for alignment.",
                        "Align the camera to the second point.",
-                       "Confirm alignment. Flip if the features are on the top."]
+                       "Confirm the alignment settings."]
 
     def __init__(self, design: Design, calibrationSettings: CalibrationSettings,
                  alignmentCamera: AlignmentCamera,
@@ -44,6 +44,7 @@ class PunchJobAlignmentWidget(QFrame):
         self.cadViewer.OnCircleClicked.Register(self.HandleCircleClick)
 
         self.instructionsText = QLabel("")
+        self.instructionsText.setProperty("IsInstructions", True)
         self.markButton = QPushButton("Mark Position")
         self.markButton.clicked.connect(self.MarkPosition)
         self.startButton = QPushButton("Start")
@@ -51,10 +52,19 @@ class PunchJobAlignmentWidget(QFrame):
         self.cancelButton = QPushButton("Cancel Alignment")
         self.cancelButton.clicked.connect(lambda: self.OnCancel.Invoke())
 
+        self.ignoreRotCheck = QCheckBox("Ignore rotation")
+        self.ignoreRotCheck.setChecked(self.design.ignoreRotation)
+        self.ignoreRotCheck.toggled.connect(self.IgnoreRotation)
+
+        self.ignoreScaleCheck = QCheckBox("Ignore scale")
+        self.ignoreScaleCheck.setChecked(self.design.ignoreScale)
+        self.ignoreScaleCheck.toggled.connect(self.IgnoreScale)
+
         self.flipCheck = QCheckBox("Flip design (if features are on top)")
         self.flipCheck.setChecked(self.design.flipY)
-
         self.flipCheck.toggled.connect(self.Flip)
+
+        self.alignmentDisplay = QLabel("")
 
         self.designItem = CADGraphicsItem(self.design)
         self.stageViewer.xyViewer.scene().addItem(self.designItem)
@@ -62,6 +72,8 @@ class PunchJobAlignmentWidget(QFrame):
         self.state = PunchJobAlignmentWidget.STATE_MARK_DOT
 
         layout = QVBoxLayout()
+
+        layout.addWidget(self.instructionsText)
 
         layout.addWidget(self.cadViewer, stretch=1)
         self.stageCamWidget = QFrame()
@@ -71,8 +83,16 @@ class PunchJobAlignmentWidget(QFrame):
         stageCamLayout.addWidget(self.cameraViewer)
 
         layout.addWidget(self.stageCamWidget)
-        layout.addWidget(self.flipCheck)
-        layout.addWidget(self.instructionsText)
+
+        self.confirmWidget = QFrame()
+        self.confirmWidget.setLayout(QVBoxLayout())
+        self.confirmWidget.layout().addWidget(self.alignmentDisplay)
+        self.confirmWidget.layout().addWidget(self.ignoreRotCheck)
+        self.confirmWidget.layout().addWidget(self.ignoreScaleCheck)
+        self.confirmWidget.layout().addWidget(self.flipCheck)
+
+        layout.addWidget(self.confirmWidget)
+
         buttonsLayout = QHBoxLayout()
         buttonsLayout.setAlignment(Qt.AlignRight)
         buttonsLayout.addWidget(self.cancelButton)
@@ -105,7 +125,7 @@ class PunchJobAlignmentWidget(QFrame):
                                      self.state == PunchJobAlignmentWidget.STATE_MARK_FIRST or
                                      self.state == PunchJobAlignmentWidget.STATE_MARK_SECOND)
         self.startButton.setVisible(self.state == PunchJobAlignmentWidget.STATE_CONFIRM_DESIGN)
-        self.flipCheck.setVisible(self.state == PunchJobAlignmentWidget.STATE_CONFIRM_DESIGN)
+        self.confirmWidget.setVisible(self.state == PunchJobAlignmentWidget.STATE_CONFIRM_DESIGN)
         self.markButton.setVisible(self.state == PunchJobAlignmentWidget.STATE_MARK_DOT or
                                    self.state == PunchJobAlignmentWidget.STATE_MARK_FIRST or
                                    self.state == PunchJobAlignmentWidget.STATE_MARK_SECOND)
@@ -120,6 +140,8 @@ class PunchJobAlignmentWidget(QFrame):
                                        self.state == PunchJobAlignmentWidget.STATE_MARK_FIRST or
                                        self.state == PunchJobAlignmentWidget.STATE_MARK_SECOND or
                                        self.state == PunchJobAlignmentWidget.STATE_CONFIRM_DESIGN)
+
+        self.UpdateAlignmentText()
 
     def HandleCircleClick(self, circle: Circle):
         if self.state == PunchJobAlignmentWidget.STATE_SELECT_FIRST:
@@ -153,7 +175,29 @@ class PunchJobAlignmentWidget(QFrame):
 
         self.UpdateStateView()
 
+    def UpdateAlignmentText(self):
+        scale = self.design.CalculateScale()
+        rotation = math.degrees(self.design.CalculateRotation())
+
+        self.alignmentDisplay.setText("Rotation: " + str(rotation) + " degrees\nScale: " + str(scale))
+
     def Flip(self, checked: bool):
         self.design.flipY = bool(checked)
 
         self.designItem.CacheCircles()
+
+        self.UpdateAlignmentText()
+
+    def IgnoreScale(self, checked: bool):
+        self.design.ignoreScale = bool(checked)
+
+        self.designItem.CacheCircles()
+
+        self.UpdateAlignmentText()
+
+    def IgnoreRotation(self, checked: bool):
+        self.design.ignoreRotation = bool(checked)
+
+        self.designItem.CacheCircles()
+
+        self.UpdateAlignmentText()

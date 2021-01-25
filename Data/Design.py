@@ -43,6 +43,9 @@ class Design:
         self.globalB = QPointF()
         self.flipY = False
 
+        self.ignoreRotation = False
+        self.ignoreScale = False
+
         self.filename = ""
 
     def GetLayers(self):
@@ -144,10 +147,38 @@ class Design:
     def GetLocalCircles(self):
         return [c for c in self._circles if self.IsCircleOn(c)]
 
+    def CalculateScale(self):
+        if self.circleA is None or self.circleB is None or self.ignoreScale:
+            return 1
+        localA = self.circleA.center
+        localB = self.circleB.center
+        if not self.flipY:
+            localA = QPointF(localA.x(), -localA.y())
+            localB = QPointF(localB.x(), -localB.y())
+
+        localDist = distance(localA, localB)
+        globalDist = distance(self.globalA, self.globalB)
+        if localDist == 0:
+            return 0
+        else:
+            return globalDist / localDist
+
+    def CalculateRotation(self):
+        if self.circleA is None or self.circleB is None or self.ignoreRotation:
+            return 0
+        localA = self.circleA.center
+        localB = self.circleB.center
+        if not self.flipY:
+            localA = QPointF(localA.x(), -localA.y())
+            localB = QPointF(localB.x(), -localB.y())
+
+        return signedAngle(localB - localA, self.globalB - self.globalA)
+
     def GetAlignedCircles(self):
         localCircles = [c.Copy() for c in self.GetLocalCircles()]
         if self.circleA is None or self.circleB is None:
             return localCircles
+
         localA = self.circleA.center
         localB = self.circleB.center
         if not self.flipY:
@@ -156,19 +187,14 @@ class Design:
             localA = QPointF(localA.x(), -localA.y())
             localB = QPointF(localB.x(), -localB.y())
 
-        localDist = distance(localA, localB)
-        globalDist = distance(self.globalA, self.globalB)
-        if localDist == 0:
-            s = 0
-        else:
-            s = globalDist / localDist
+        theta = self.CalculateRotation()
+        scale = self.CalculateScale()
 
-        theta = signedAngle(localB - localA, self.globalB - self.globalA)
         globalCircles = []
         for c in localCircles:
             transformedCircle = c.Copy()
             transformedCircle.center = transformedCircle.center - localA  # Relative to A
-            transformedCircle.center = transformedCircle.center * s  # scaled
+            transformedCircle.center = transformedCircle.center * scale  # scaled
             transformedCircle.center = rotate(transformedCircle.center, theta)  # rotated
             transformedCircle.center = transformedCircle.center + self.globalA  # Relative to global A
             globalCircles.append(transformedCircle)

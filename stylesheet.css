@@ -6,6 +6,9 @@ QTabBar QLabel {
 CameraViewer{
 	border: 2px solid black;
 }
+StageXYViewerWidget {
+	min-width: 300px;
+}
 StageControllerWidget {
 	background-color: rgb(40, 40, 40);
 	border: 5px inset rgb(100, 100, 100);
@@ -36,4 +39,10 @@ StageControllerWidget Spacer {
 	border: 0px solid black;
 	border-right-width: 1px;
 	margin: 0 20px 0 20px; 
+}
+QLabel[IsInstructions=true] {
+	font-weight: bold;
+    qproperty-alignment: 'AlignCenter';
+    font-size: 15px;
+    color: black;
 }

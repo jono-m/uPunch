@@ -1,6 +1,7 @@
 from UI.CameraSettingsWidget import *
 from UI.PunchJobSetupWidget import *
 from UI.PunchJobAlignmentWidget import *
+from UI.PunchJobFollowWidget import *
 from UI.StageSettingsWidget import *
 from StylesheetLoader import *
 from PySide2.QtGui import *
@@ -29,7 +30,12 @@ class MainApp(QMainWindow):
         self.punchJobAlignmentWidget = PunchJobAlignmentWidget(self.punchJobWidget.design, self.calibrationSettings,
                                                                self.alignmentCamera, self.stageSystem)
         self.punchJobAlignmentWidget.OnCancel.Register(lambda: self.jobLayout.setCurrentIndex(0))
-        self.punchJobAlignmentWidget.OnNext.Register(lambda: self.jobLayout.setCurrentIndex(2))
+        self.punchJobAlignmentWidget.OnNext.Register(self.GoToJob)
+
+        self.punchJobFollowWidget = PunchJobFollowWidget(self.punchJobWidget.design, self.calibrationSettings,
+                                                         self.alignmentCamera, self.stageSystem)
+        self.punchJobFollowWidget.OnCancel.Register(lambda: self.jobLayout.setCurrentIndex(0))
+        self.punchJobFollowWidget.OnFinish.Register(lambda: self.jobLayout.setCurrentIndex(0))
 
         self.switchTipButton = QPushButton(u"\U0001F5D8" + "\nSwitch Tip ")
         self.switchTipButton.clicked.connect(self.OpenSwitchTipWindow)
@@ -47,6 +53,7 @@ class MainApp(QMainWindow):
         self.jobLayout = QStackedLayout()
         self.jobLayout.addWidget(self.punchJobWidget)
         self.jobLayout.addWidget(self.punchJobAlignmentWidget)
+        self.jobLayout.addWidget(self.punchJobFollowWidget)
         self.jobLayout.setCurrentIndex(0)
 
         mainLayout.addLayout(self.jobLayout)
@@ -61,11 +68,21 @@ class MainApp(QMainWindow):
 
         self.setWindowTitle("μPunch")
 
-        self.showMaximized()
+        timer = QTimer(self)
+        timer.timeout.connect(self.Tick)
+        timer.start()
+
+    def Tick(self):
+        self.switchTipButton.setVisible(self.jobLayout.currentIndex() == 0)
+        self.settingsButton.setVisible(self.jobLayout.currentIndex() == 0)
 
     def GoToAlignment(self):
         self.punchJobAlignmentWidget.Begin()
         self.jobLayout.setCurrentIndex(1)
+
+    def GoToJob(self):
+        self.punchJobFollowWidget.StartJob()
+        self.jobLayout.setCurrentIndex(2)
 
     def OpenSwitchTipWindow(self):
         switchTipWindow = SwitchTipWindow(self, self.stageSystem, self.alignmentCamera, self.calibrationSettings)

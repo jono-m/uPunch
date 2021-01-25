@@ -24,6 +24,9 @@ class CameraViewerWidget(QLabel):
 
         self.setMouseTracking(True)
 
+    def sizeHint(self):
+        return self.camera.GetResolution()
+
     def enterEvent(self, event: QEvent):
         self.mouseIndicatorVisible = True
 
@@ -77,10 +80,8 @@ class CameraViewerWidget(QLabel):
 
         image = self.camera.GetImage()
         if image is not None:
-            self.setMinimumSize(self.camera.GetResolution())
             self.setPixmap(QPixmap.fromImage(image).scaled(self.size(), Qt.KeepAspectRatio))
         else:
-            self.setMinimumSize(QSize(200, 200))
             self.setPixmap(None)
             self.setText("No camera selected.")
 

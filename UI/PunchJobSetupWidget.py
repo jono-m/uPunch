@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import *
 from UI.CADEditor import *
-from UI.PunchJobDialog import *
+from UI.PunchJobFollowWidget import *
 
 
 class PunchJobSetupWidget(QFrame):
@@ -31,6 +31,7 @@ class PunchJobSetupWidget(QFrame):
         self.blockList.OnChanged.Register(self.UpdateView)
 
         self.instructionsText = QLabel()
+        self.instructionsText.setProperty("IsInstructions", True)
 
         self.circleCount = QLabel("")
 
